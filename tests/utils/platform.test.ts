@@ -1,7 +1,3 @@
-/**
- * Platform Detection Tests
- */
-
 import { describe, it, expect } from "vitest";
 import { isReactNative, isWeb, getPlatform } from "../../src/utils/platform";
 

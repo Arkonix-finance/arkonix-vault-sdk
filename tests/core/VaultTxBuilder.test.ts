@@ -1,7 +1,3 @@
-/**
- * VaultTxBuilder Tests
- */
-
 import { describe, it, expect } from "vitest";
 import { decodeFunctionData, type Address } from "viem";
 import { VaultTxBuilder } from "../../src/core/blockchain/VaultTxBuilder";

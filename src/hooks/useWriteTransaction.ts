@@ -1,12 +1,6 @@
-/**
- * Shared hook for executing a write transaction via WalletAdapter.
- * Handles send + waitForTransactionReceipt + state tracking.
- */
-
 import { useState, useCallback } from "react";
 import type { Hash } from "viem";
-import type { TxState } from "../types/transaction";
-import type { TransactionRequest } from "../types/transaction";
+import type { TxState, TransactionRequest } from "../types/transaction";
 import { useVaultContext } from "../provider/VaultContext";
 
 interface UseWriteTransactionReturn {
@@ -35,7 +29,6 @@ export function useWriteTransaction(): UseWriteTransactionReturn {
     const hash = await walletAdapter.sendTransaction(tx) as Hash;
     setTxHash(hash);
     setTxState('confirming');
-
     await publicClient.waitForTransactionReceipt({ hash });
     return hash;
   }, [walletAdapter, publicClient]);

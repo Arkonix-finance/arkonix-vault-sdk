@@ -1,6 +1,1 @@
-/**
- * Utilities Index
- */
-
-export * from "./decimals";
-export * from "./platform";
+export { isReactNative, isWeb, getPlatform } from "./platform";

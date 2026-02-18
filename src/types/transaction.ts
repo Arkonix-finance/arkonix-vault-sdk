@@ -1,7 +1,3 @@
-/**
- * Transaction Types for ERC-7540 Vault Operations
- */
-
 import type { Address } from "viem";
 
 export type TxState = 'idle' | 'approving' | 'pending' | 'confirming' | 'success' | 'error';

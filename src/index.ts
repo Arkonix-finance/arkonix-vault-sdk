@@ -1,21 +1,10 @@
-/**
- * @arkonix.xyz/arkonix-vault-sdk
- * Universal React/React Native SDK for ERC-7540 vault operations
- *
- * Main entry point - exports all public APIs
- */
-
-// ============================================================================
 // Provider
-// ============================================================================
 export { VaultProvider } from "./provider/VaultProvider";
 export type { VaultProviderProps } from "./provider/VaultProvider";
 export { useVaultContext } from "./provider/VaultContext";
 export type { VaultContextValue } from "./provider/VaultContext";
 
-// ============================================================================
 // Hooks
-// ============================================================================
 export { useUserAddress } from "./hooks/useUserAddress";
 export { useWriteTransaction } from "./hooks/useWriteTransaction";
 export { useDeposit } from "./hooks/useDeposit";
@@ -26,9 +15,7 @@ export { useClaimCancelRedeem } from "./hooks/useClaimCancelRedeem";
 export { useVaultUserState } from "./hooks/useVaultUserState";
 export { useVaultMetadata } from "./hooks/useVaultMetadata";
 
-// ============================================================================
 // Types
-// ============================================================================
 export type {
   VaultSDKConfig,
   TxState,
@@ -40,25 +27,18 @@ export type {
   AddTokenParams,
 } from "./types";
 
-// ============================================================================
-// Utilities
-// ============================================================================
-export {
-  parseUnits,
-  formatUnits,
-  TOKEN_DECIMALS,
-  isReactNative,
-  isWeb,
-  getPlatform,
-} from "./utils";
+// Standalone core (no React required)
+export { VaultReader } from "./core/blockchain";
+export { VaultTxBuilder } from "./core/blockchain";
+export { VaultActions } from "./core/blockchain";
+export type { SendTransactionFn, DepositResult, TxResult } from "./core/blockchain";
 
-// ============================================================================
-// Constants
-// ============================================================================
+// Wallet adapters
+export { WebWalletAdapter, RNWalletAdapter } from "./core/wallet";
+
+// Utilities
+export { isReactNative, isWeb, getPlatform } from "./utils";
 export {
-  ERC20_ABI,
-  SYNC_DEPOSIT_VAULT_ABI,
-  ASYNC_VAULT_ABI,
   getContracts,
   isChainSupported,
   getSupportedChainIds,
@@ -66,9 +46,3 @@ export {
   DEFAULT_CHAIN,
   DEFAULT_CHAIN_ID,
 } from "./constants";
-
-// ============================================================================
-// Core (Advanced Usage)
-// ============================================================================
-export { VaultTxBuilder } from "./core/blockchain";
-export { WebWalletAdapter, RNWalletAdapter } from "./core/wallet";

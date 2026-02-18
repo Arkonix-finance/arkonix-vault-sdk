@@ -1,7 +1,3 @@
-/**
- * Type Definitions Index
- */
-
 export type { VaultSDKConfig } from "./config";
 export type { TxState, VaultType, TransactionRequest } from "./transaction";
 export type { VaultUserState } from "./vaultUserState";

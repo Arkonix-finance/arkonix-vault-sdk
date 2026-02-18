@@ -1,14 +1,9 @@
-/**
- * Hook for cancelling a pending redeem request.
- * Calls vault.cancelRedeemRequest(0, controller)
- */
-
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import type { Address, Hash } from "viem";
 import type { TxState } from "../types/transaction";
 import { VaultTxBuilder } from "../core/blockchain/VaultTxBuilder";
-import { useVaultContext } from "../provider/VaultContext";
 import { useUserAddress } from "./useUserAddress";
+import { useWriteTransaction } from "./useWriteTransaction";
 
 interface UseCancelRedeemReturn {
   cancelRedeem: () => Promise<void>;
@@ -21,17 +16,8 @@ interface UseCancelRedeemReturn {
 export function useCancelRedeem(
   vaultAddress: Address | undefined,
 ): UseCancelRedeemReturn {
-  const { walletAdapter, publicClient } = useVaultContext();
   const userAddress = useUserAddress();
-  const [txState, setTxState] = useState<TxState>('idle');
-  const [txHash, setTxHash] = useState<Hash | undefined>();
-  const [error, setError] = useState<string | null>(null);
-
-  const reset = useCallback(() => {
-    setTxState('idle');
-    setTxHash(undefined);
-    setError(null);
-  }, []);
+  const { execute, txState, txHash, error, reset, setTxState, setError } = useWriteTransaction();
 
   const cancelRedeem = useCallback(async () => {
     if (!userAddress || !vaultAddress) {
@@ -42,18 +28,13 @@ export function useCancelRedeem(
     try {
       setError(null);
       setTxState('pending');
-
-      const tx = VaultTxBuilder.buildCancelRedeemTx(vaultAddress, userAddress);
-      const hash = await walletAdapter.sendTransaction(tx) as Hash;
-      setTxHash(hash);
-      setTxState('confirming');
-      await publicClient.waitForTransactionReceipt({ hash });
+      await execute(VaultTxBuilder.buildCancelRedeemTx(vaultAddress, userAddress));
       setTxState('success');
     } catch (err: any) {
       setTxState('error');
       setError(err?.shortMessage || err?.message || 'Cancel failed');
     }
-  }, [userAddress, vaultAddress, walletAdapter, publicClient]);
+  }, [userAddress, vaultAddress, execute, setTxState, setError]);
 
   return { cancelRedeem, txState, txHash, error, reset };
 }

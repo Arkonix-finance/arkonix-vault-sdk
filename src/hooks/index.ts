@@ -1,7 +1,3 @@
-/**
- * Hooks Index
- */
-
 export { useUserAddress } from "./useUserAddress";
 export { useWriteTransaction } from "./useWriteTransaction";
 export { useDeposit } from "./useDeposit";

@@ -1,8 +1,3 @@
-/**
- * Hook to get the current user's wallet address.
- * Uses the WalletAdapter from VaultContext.
- */
-
 import { useState, useEffect } from "react";
 import type { Address } from "viem";
 import { useVaultContext } from "../provider/VaultContext";

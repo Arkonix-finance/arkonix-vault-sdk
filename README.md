@@ -47,6 +47,41 @@ function App() {
 
 > **Note:** If your app already uses `@tanstack/react-query`, reuse your existing `QueryClientProvider` — no need for a second one.
 
+#### React Native Integration
+
+Pass a custom `walletAdapter` that bridges to your existing wallet library:
+
+```tsx
+import { VaultProvider, type WalletAdapter } from "@arkonix.xyz/arkonix-vault-sdk";
+
+function MyVaultProvider({ children }: { children: React.ReactNode }) {
+  // Bridge to your existing wallet (WalletConnect, Privy, etc.)
+  const walletAdapter: WalletAdapter = useMemo(() => ({
+    platform: "native" as const,
+    isConnected: () => !!myWallet.address,
+    getAddress: async () => myWallet.address ?? null,
+    connect: async () => { /* your wallet connect logic */ },
+    disconnect: async () => { /* your wallet disconnect logic */ },
+    sendTransaction: async (tx) => {
+      return await myWallet.sendTransaction({
+        to: tx.to,
+        data: tx.data,
+        value: tx.value,
+      });
+    },
+  }), [myWallet]);
+
+  return (
+    <VaultProvider
+      config={{ chainId: 42161, rpcUrl: "https://arb1.arbitrum.io/rpc" }}
+      walletAdapter={walletAdapter}
+    >
+      {children}
+    </VaultProvider>
+  );
+}
+```
+
 #### wagmi / RainbowKit Integration
 
 If you already use wagmi, pass a custom `walletAdapter` to reuse your existing wallet connection:
@@ -88,28 +123,53 @@ function WagmiVaultProvider({ children }: { children: React.ReactNode }) {
 
 ### Option B: Standalone (No Wrapper)
 
-Use `VaultTxBuilder` and ABIs directly with your own viem client — no provider needed:
+Use `VaultReader`, `VaultActions`, and `VaultTxBuilder` directly with your own viem client — no provider needed:
 
 ```typescript
 import { createPublicClient, http } from "viem";
 import { arbitrum } from "viem/chains";
-import {
-  VaultTxBuilder,
-  SYNC_DEPOSIT_VAULT_ABI,
-  ERC20_ABI,
-} from "@arkonix.xyz/arkonix-vault-sdk";
+import { VaultReader, VaultActions } from "@arkonix.xyz/arkonix-vault-sdk";
 
 const client = createPublicClient({ chain: arbitrum, transport: http(rpcUrl) });
+const vaultAddress = "0x...";
 
-// Read vault state
-const [asset, totalAssets] = await Promise.all([
-  client.readContract({ address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: "asset" }),
-  client.readContract({ address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: "totalAssets" }),
-]);
+// Your wallet's sendTransaction — bridge to WalletConnect, Privy, ethers, etc.
+const sendTransaction = async (tx) => {
+  return await myWallet.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
+};
 
-// Build tx calldata — send with your own wallet/signer
-const tx = VaultTxBuilder.buildDepositTx(vaultAddress, amount, userAddress, "SYNC");
-// tx = { to, data, value }
+// Read vault metadata (asset, share token, decimals, type, TVL)
+const meta = await VaultReader.getMetadata(client, vaultAddress);
+
+// Read user position
+const state = await VaultReader.getUserState(
+  client, vaultAddress, userAddress, meta.vaultType, meta.assetDecimals
+);
+
+// Deposit (handles allowance check + approve + deposit in one call)
+const { depositHash } = await VaultActions.deposit(
+  client, sendTransaction, vaultAddress,
+  "100",             // amount in human-readable form
+  userAddress,
+  meta.asset,        // deposit asset address
+  meta.assetDecimals,
+  meta.vaultType,    // SYNC or ASYNC
+);
+
+// Request redeem
+const { txHash } = await VaultActions.requestRedeem(
+  client, sendTransaction, vaultAddress,
+  "10",              // shares in human-readable form
+  userAddress,
+  meta.shareDecimals,
+);
+
+// After epoch executes, claim the redeem
+if (state.hasClaimable) {
+  await VaultActions.claimRedeem(
+    client, sendTransaction, vaultAddress, state.claimableShares, userAddress
+  );
+}
 ```
 
 ## Usage
@@ -305,6 +365,42 @@ CANCEL REDEEM:
 | `useUserAddress()` | Get connected wallet address |
 | `useVaultContext()` | Access config, walletAdapter, publicClient |
 
+## Standalone API Reference
+
+### VaultActions (orchestrated flows)
+
+| Method | Purpose |
+|--------|---------|
+| `VaultActions.deposit(client, sendTx, vault, amount, user, asset, decimals, type)` | Full deposit: allowance check + approve + deposit |
+| `VaultActions.requestRedeem(client, sendTx, vault, shares, user, decimals)` | Request async redeem |
+| `VaultActions.claimRedeem(client, sendTx, vault, shares, user)` | Claim completed redeem |
+| `VaultActions.cancelRedeem(client, sendTx, vault, user)` | Cancel pending redeem |
+| `VaultActions.claimCancelRedeem(client, sendTx, vault, user)` | Claim shares after cancel |
+
+### VaultReader (read-only)
+
+| Method | Purpose |
+|--------|---------|
+| `VaultReader.getMetadata(client, vault)` | Read vault metadata (asset, share, decimals, type, TVL) |
+| `VaultReader.getUserState(client, vault, user, type, decimals)` | Read user position + pending/claimable states |
+| `VaultReader.getAllowance(client, token, owner, spender)` | Read ERC20 allowance |
+| `VaultReader.getBalance(client, token, account)` | Read ERC20 balance |
+| `VaultReader.getMaxDeposit(client, vault, receiver)` | Max depositable amount |
+| `VaultReader.getMaxRedeem(client, vault, owner)` | Max redeemable shares |
+| `VaultReader.convertToAssets(client, vault, shares)` | Convert shares to asset value |
+| `VaultReader.convertToShares(client, vault, assets)` | Convert assets to share value |
+
+### VaultTxBuilder (low-level calldata)
+
+| Method | Purpose |
+|--------|---------|
+| `VaultTxBuilder.buildDepositTx(vault, assets, receiver, type)` | Build deposit calldata |
+| `VaultTxBuilder.buildApproveTx(token, spender, amount)` | Build ERC20 approve calldata |
+| `VaultTxBuilder.buildRequestRedeemTx(vault, shares, controller, owner)` | Build redeem request calldata |
+| `VaultTxBuilder.buildClaimRedeemTx(vault, shares, receiver, controller)` | Build claim redeem calldata |
+| `VaultTxBuilder.buildCancelRedeemTx(vault, controller)` | Build cancel redeem calldata |
+| `VaultTxBuilder.buildClaimCancelRedeemTx(vault, receiver, controller)` | Build claim cancel calldata |
+
 ## Types
 
 ```typescript
@@ -346,19 +442,6 @@ interface VaultUserState {
 type TxState = 'idle' | 'approving' | 'pending' | 'confirming' | 'success' | 'error';
 type VaultType = 'SYNC' | 'ASYNC';
 ```
-
-## VaultTxBuilder Methods
-
-All static methods return `{ to, data, value }` — send with any wallet or signer.
-
-| Method | Description |
-|--------|-------------|
-| `buildDepositTx(vault, assets, receiver, vaultType)` | SYNC: `deposit()`, ASYNC: `requestDeposit()` |
-| `buildApproveTx(token, spender, amount)` | ERC20 approve |
-| `buildRequestRedeemTx(vault, shares, controller, owner)` | Request async redeem |
-| `buildClaimRedeemTx(vault, shares, receiver, controller)` | Claim completed redeem |
-| `buildCancelRedeemTx(vault, controller)` | Cancel pending redeem |
-| `buildClaimCancelRedeemTx(vault, receiver, controller)` | Claim shares after cancel |
 
 ## Development
 

@@ -1,7 +1,3 @@
-/**
- * Contract Addresses Tests
- */
-
 import { describe, it, expect } from "vitest";
 import {
   getContracts,

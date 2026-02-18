@@ -1,12 +1,3 @@
-/**
- * Contract ABIs for ERC-7540 Vaults
- *
- * Three ABIs:
- * - ERC20_ABI: Standard token operations (approve, balance, allowance)
- * - SYNC_DEPOSIT_VAULT_ABI: Synchronous deposit + async redeem (SyncDepositVault)
- * - ASYNC_VAULT_ABI: Async deposit + async redeem (AsyncVault)
- */
-
 export const ERC20_ABI = [
   {
     inputs: [
@@ -51,7 +42,6 @@ export const ERC20_ABI = [
   },
 ] as const
 
-// SyncDepositVault ABI (ERC-4626 deposits + ERC-7540 async redemptions)
 export const SYNC_DEPOSIT_VAULT_ABI = [
   // Deposit (synchronous, ERC-4626 compatible)
   {
@@ -243,7 +233,6 @@ export const SYNC_DEPOSIT_VAULT_ABI = [
   },
 ] as const
 
-// AsyncVault ABI (ERC-7540 async deposits + async redemptions)
 export const ASYNC_VAULT_ABI = [
   // Request Deposit (async, ERC-7540)
   {
