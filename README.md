@@ -14,7 +14,11 @@ pnpm add @arkonix.xyz/arkonix-vault-sdk viem @tanstack/react-query
 
 ## Setup
 
-Wrap your app with `QueryClientProvider` and `VaultProvider`:
+The SDK supports two usage patterns: **React hooks** (with a scoped provider) or **standalone** (no wrapper needed).
+
+### Option A: React Hooks (Recommended)
+
+Wrap only the vault section of your app — **not the entire app**:
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -24,23 +28,28 @@ const queryClient = new QueryClient();
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <VaultProvider
-        config={{
-          chainId: 42161, // Arbitrum
-          rpcUrl: "https://arb1.arbitrum.io/rpc",
-        }}
-      >
-        <YourApp />
-      </VaultProvider>
-    </QueryClientProvider>
+    <YourExistingApp>
+      {/* Only wrap vault components, not your whole app */}
+      <QueryClientProvider client={queryClient}>
+        <VaultProvider
+          config={{
+            chainId: 42161, // Arbitrum
+            rpcUrl: "https://arb1.arbitrum.io/rpc",
+          }}
+        >
+          <VaultWidget />
+        </VaultProvider>
+      </QueryClientProvider>
+    </YourExistingApp>
   );
 }
 ```
 
-### Custom Wallet Adapter (wagmi / RainbowKit)
+> **Note:** If your app already uses `@tanstack/react-query`, reuse your existing `QueryClientProvider` — no need for a second one.
 
-If you already use wagmi or RainbowKit, pass a custom `walletAdapter` to avoid double wallet management:
+#### wagmi / RainbowKit Integration
+
+If you already use wagmi, pass a custom `walletAdapter` to reuse your existing wallet connection:
 
 ```tsx
 import { useWalletClient, useAccount } from "wagmi";
@@ -50,13 +59,12 @@ function WagmiVaultProvider({ children }: { children: React.ReactNode }) {
   const { data: walletClient } = useWalletClient();
   const { address } = useAccount();
 
-  // Create a WalletAdapter that delegates to wagmi
   const walletAdapter: WalletAdapter = useMemo(() => ({
     platform: "web" as const,
     isConnected: () => !!address,
     getAddress: async () => address ?? null,
     connect: async () => { throw new Error("Use RainbowKit connect button"); },
-    disconnect: async () => { /* handled by RainbowKit */ },
+    disconnect: async () => {},
     sendTransaction: async (tx) => {
       if (!walletClient) throw new Error("Wallet not connected");
       return walletClient.sendTransaction({
@@ -76,6 +84,32 @@ function WagmiVaultProvider({ children }: { children: React.ReactNode }) {
     </VaultProvider>
   );
 }
+```
+
+### Option B: Standalone (No Wrapper)
+
+Use `VaultTxBuilder` and ABIs directly with your own viem client — no provider needed:
+
+```typescript
+import { createPublicClient, http } from "viem";
+import { arbitrum } from "viem/chains";
+import {
+  VaultTxBuilder,
+  SYNC_DEPOSIT_VAULT_ABI,
+  ERC20_ABI,
+} from "@arkonix.xyz/arkonix-vault-sdk";
+
+const client = createPublicClient({ chain: arbitrum, transport: http(rpcUrl) });
+
+// Read vault state
+const [asset, totalAssets] = await Promise.all([
+  client.readContract({ address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: "asset" }),
+  client.readContract({ address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: "totalAssets" }),
+]);
+
+// Build tx calldata — send with your own wallet/signer
+const tx = VaultTxBuilder.buildDepositTx(vaultAddress, amount, userAddress, "SYNC");
+// tx = { to, data, value }
 ```
 
 ## Usage
@@ -313,24 +347,18 @@ type TxState = 'idle' | 'approving' | 'pending' | 'confirming' | 'success' | 'er
 type VaultType = 'SYNC' | 'ASYNC';
 ```
 
-## Advanced: VaultTxBuilder
+## VaultTxBuilder Methods
 
-For non-React usage or custom transaction flows, use `VaultTxBuilder` directly:
+All static methods return `{ to, data, value }` — send with any wallet or signer.
 
-```typescript
-import { VaultTxBuilder } from "@arkonix.xyz/arkonix-vault-sdk";
-
-const tx = VaultTxBuilder.buildDepositTx(vaultAddress, amount, receiver, "SYNC");
-// tx = { to, data, value } — send via any wallet/signer
-```
-
-Available methods:
-- `buildDepositTx(vault, assets, receiver, vaultType)`
-- `buildApproveTx(token, spender, amount)`
-- `buildRequestRedeemTx(vault, shares, controller, owner)`
-- `buildClaimRedeemTx(vault, shares, receiver, controller)`
-- `buildCancelRedeemTx(vault, controller)`
-- `buildClaimCancelRedeemTx(vault, receiver, controller)`
+| Method | Description |
+|--------|-------------|
+| `buildDepositTx(vault, assets, receiver, vaultType)` | SYNC: `deposit()`, ASYNC: `requestDeposit()` |
+| `buildApproveTx(token, spender, amount)` | ERC20 approve |
+| `buildRequestRedeemTx(vault, shares, controller, owner)` | Request async redeem |
+| `buildClaimRedeemTx(vault, shares, receiver, controller)` | Claim completed redeem |
+| `buildCancelRedeemTx(vault, controller)` | Cancel pending redeem |
+| `buildClaimCancelRedeemTx(vault, receiver, controller)` | Claim shares after cancel |
 
 ## Development
 
