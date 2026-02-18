@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+.pnpm-debug.log
+
+# Build output
+dist
+*.tsbuildinfo
+
+# Testing
+coverage
+.vitest
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Development documentation (implementation notes, not user-facing)
+dev-docs/

@@ -1,0 +1,24 @@
+# Source files
+src
+tests
+examples
+
+# Config files
+tsconfig.json
+vitest.config.ts
+.eslintrc.js
+
+# Development
+*.test.ts
+*.spec.ts
+coverage
+.vitest
+
+# Documentation
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+
+# Git
+.git
+.gitignore

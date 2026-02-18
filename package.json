@@ -1,0 +1,65 @@
+{
+  "name": "@arkonix.xyz/arkonix-vault-sdk",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Universal React/React Native SDK for ERC-7540 vault deposit & redeem operations",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/**/*.ts",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "pnpm build && pnpm test"
+  },
+  "dependencies": {
+    "viem": "^2.43.3",
+    "@tanstack/react-query": "^5.90.12"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.70.0 || *"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.0.0",
+    "tsup": "^8.0.0",
+    "vitest": "^2.0.0",
+    "@testing-library/react": "^16.0.0",
+    "happy-dom": "^15.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "eslint": "^9.0.0"
+  },
+  "keywords": [
+    "arkonix",
+    "vault",
+    "erc7540",
+    "defi",
+    "ethereum",
+    "arbitrum",
+    "react",
+    "react-native",
+    "sdk"
+  ],
+  "author": "Arkonix",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arkonix-finance/arkonix-vault-sdk"
+  }
+}
