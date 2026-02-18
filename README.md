@@ -455,4 +455,8 @@ pnpm dev          # Watch mode
 
 ## License
 
-MIT
+Licensed under the [Business Source License 1.1](./LICENSE) (BUSL-1.1).
+
+- **Non-production use** (evaluation, testing, development): Free
+- **Production use**: Requires a commercial license — contact [info@arkonix.xyz](mailto:info@arkonix.xyz)
+- **Change Date**: 2030-02-18 — converts to Apache 2.0 after this date

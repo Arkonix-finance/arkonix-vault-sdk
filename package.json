@@ -54,7 +54,7 @@
     "sdk"
   ],
   "author": "Arkonix",
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "publishConfig": {
     "access": "public"
   },
