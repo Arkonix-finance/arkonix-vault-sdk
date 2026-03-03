@@ -23,7 +23,7 @@ export class VaultActions {
     userAddress: Address,
     assetAddress: Address,
     assetDecimals: number,
-    vaultType: VaultType = 'SYNC',
+    vaultType: VaultType = 'ASYNC',
   ): Promise<DepositResult> {
     const parsedAmount = parseUnits(amount, assetDecimals);
     if (parsedAmount <= 0n) throw new Error('Amount must be greater than 0');
@@ -46,6 +46,22 @@ export class VaultActions {
     await client.waitForTransactionReceipt({ hash: depositHash });
 
     return { approveHash, depositHash };
+  }
+
+  static async claimDeposit(
+    client: PublicClient,
+    sendTransaction: SendTransactionFn,
+    vaultAddress: Address,
+    assets: bigint,
+    userAddress: Address,
+  ): Promise<TxResult> {
+    if (assets <= 0n) throw new Error('No assets to claim');
+
+    const tx = VaultTxBuilder.buildClaimDepositTx(vaultAddress, assets, userAddress);
+    const txHash = await sendTransaction(tx) as Hash;
+    await client.waitForTransactionReceipt({ hash: txHash });
+
+    return { txHash };
   }
 
   static async requestRedeem(

@@ -21,8 +21,8 @@ describe("VaultTxBuilder", () => {
   });
 
   describe("buildDepositTx", () => {
-    it("encodes SYNC deposit correctly", () => {
-      const tx = VaultTxBuilder.buildDepositTx(VAULT, 500n, USER, "SYNC");
+    it("encodes SYNC_DEPOSIT_ASYNC_REDEEM deposit correctly", () => {
+      const tx = VaultTxBuilder.buildDepositTx(VAULT, 500n, USER, "SYNC_DEPOSIT_ASYNC_REDEEM");
       expect(tx.to).toBe(VAULT);
       expect(tx.value).toBe(0n);
 
@@ -40,10 +40,22 @@ describe("VaultTxBuilder", () => {
       expect(decoded.args).toEqual([500n, USER, USER]);
     });
 
-    it("defaults to SYNC", () => {
+    it("defaults to ASYNC", () => {
       const tx = VaultTxBuilder.buildDepositTx(VAULT, 100n, USER);
+      const decoded = decodeFunctionData({ abi: ASYNC_VAULT_ABI, data: tx.data });
+      expect(decoded.functionName).toBe("requestDeposit");
+    });
+  });
+
+  describe("buildClaimDepositTx", () => {
+    it("encodes ERC-4626 deposit for claiming", () => {
+      const tx = VaultTxBuilder.buildClaimDepositTx(VAULT, 500n, USER);
+      expect(tx.to).toBe(VAULT);
+      expect(tx.value).toBe(0n);
+
       const decoded = decodeFunctionData({ abi: SYNC_DEPOSIT_VAULT_ABI, data: tx.data });
       expect(decoded.functionName).toBe("deposit");
+      expect(decoded.args).toEqual([500n, USER]);
     });
   });
 

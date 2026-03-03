@@ -31,7 +31,7 @@ export function useVaultUserState(
   vaultAddress: Address | undefined,
   shareTokenAddress: Address | undefined,
   depositAssetDecimals: number = 6,
-  vaultType: VaultType = 'SYNC',
+  vaultType: VaultType = 'ASYNC',
 ): VaultUserState {
   const { publicClient } = useVaultContext();
   const userAddress = useUserAddress();

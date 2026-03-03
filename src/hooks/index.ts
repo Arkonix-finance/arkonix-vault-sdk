@@ -1,6 +1,7 @@
 export { useUserAddress } from "./useUserAddress";
 export { useWriteTransaction } from "./useWriteTransaction";
 export { useDeposit } from "./useDeposit";
+export { useClaimDeposit } from "./useClaimDeposit";
 export { useRequestRedeem } from "./useRequestRedeem";
 export { useClaimRedeem } from "./useClaimRedeem";
 export { useCancelRedeem } from "./useCancelRedeem";

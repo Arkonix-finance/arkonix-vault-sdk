@@ -49,7 +49,7 @@ describe("VaultReader", () => {
       expect(meta.share).toBe(SHARE);
       expect(meta.poolId).toBe(1n);
       expect(meta.vaultKind).toBe(0);
-      expect(meta.vaultType).toBe("SYNC");
+      expect(meta.vaultType).toBe("ASYNC");
       expect(meta.totalAssets).toBe(1000000n);
       expect(meta.assetDecimals).toBe(6);
       expect(meta.assetSymbol).toBe("USDC");
@@ -57,12 +57,12 @@ describe("VaultReader", () => {
       expect(meta.shareSymbol).toBe("vUSDC");
     });
 
-    it("returns ASYNC vaultType when vaultKind is 1", async () => {
+    it("returns SYNC_DEPOSIT_ASYNC_REDEEM vaultType when vaultKind is non-zero", async () => {
       const client = createMockClient({
         multicallResults: [
           [
             { result: ASSET }, { result: SHARE }, { result: 2n },
-            { result: 1 }, { result: 0n },
+            { result: 2 }, { result: 0n },
           ],
           [
             { result: 6 }, { result: "USDC" },
@@ -72,8 +72,8 @@ describe("VaultReader", () => {
       });
 
       const meta = await VaultReader.getMetadata(client, VAULT);
-      expect(meta.vaultType).toBe("ASYNC");
-      expect(meta.vaultKind).toBe(1);
+      expect(meta.vaultType).toBe("SYNC_DEPOSIT_ASYNC_REDEEM");
+      expect(meta.vaultKind).toBe(2);
     });
 
     it("calls multicall twice (vault + token batches)", async () => {
@@ -102,7 +102,7 @@ describe("VaultReader", () => {
         ],
       });
 
-      const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC", 6);
+      const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC_DEPOSIT_ASYNC_REDEEM", 6);
 
       expect(state.shareBalance).toBe(0n);
       expect(state.hasPending).toBe(false);
@@ -124,7 +124,7 @@ describe("VaultReader", () => {
             { result: false },
             { result: 0n },
           ],
-          // Batch 3: conversions (batch 2 skipped for SYNC)
+          // Batch 3: conversions (batch 2 skipped for SYNC_DEPOSIT_ASYNC_REDEEM)
           [
             { result: 100000000n }, // positionAssets (100 USDC)
             { result: 50000000n },  // pendingAssets (50 USDC)
@@ -133,7 +133,7 @@ describe("VaultReader", () => {
         ],
       });
 
-      const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC", 6);
+      const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC_DEPOSIT_ASYNC_REDEEM", 6);
 
       expect(state.shareBalance).toBe(100n * 10n ** 18n);
       expect(state.hasPending).toBe(true);
@@ -165,7 +165,7 @@ describe("VaultReader", () => {
       expect(state.claimableDepositAssets).toBe(200000n);
     });
 
-    it("skips async deposit batch for SYNC vaults", async () => {
+    it("skips async deposit batch for SYNC_DEPOSIT_ASYNC_REDEEM vaults", async () => {
       const client = createMockClient({
         readContractResult: SHARE,
         multicallResults: [
@@ -173,7 +173,7 @@ describe("VaultReader", () => {
         ],
       });
 
-      const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC", 6);
+      const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC_DEPOSIT_ASYNC_REDEEM", 6);
 
       expect(state.pendingDepositAssets).toBe(0n);
       expect(state.claimableDepositAssets).toBe(0n);

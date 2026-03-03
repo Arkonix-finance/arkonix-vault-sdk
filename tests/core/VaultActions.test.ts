@@ -25,7 +25,7 @@ describe("VaultActions", () => {
       const sendTx = createMockSendTx();
 
       const result = await VaultActions.deposit(
-        client, sendTx, VAULT, "100", USER, ASSET, 6, "SYNC",
+        client, sendTx, VAULT, "100", USER, ASSET, 6, "SYNC_DEPOSIT_ASYNC_REDEEM",
       );
 
       expect(sendTx).toHaveBeenCalledTimes(2); // approve + deposit
@@ -39,7 +39,7 @@ describe("VaultActions", () => {
       const sendTx = createMockSendTx();
 
       const result = await VaultActions.deposit(
-        client, sendTx, VAULT, "100", USER, ASSET, 6, "SYNC",
+        client, sendTx, VAULT, "100", USER, ASSET, 6, "SYNC_DEPOSIT_ASYNC_REDEEM",
       );
 
       expect(sendTx).toHaveBeenCalledTimes(1); // deposit only

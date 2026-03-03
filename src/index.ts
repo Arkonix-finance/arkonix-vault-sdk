@@ -8,6 +8,7 @@ export type { VaultContextValue } from "./provider/VaultContext";
 export { useUserAddress } from "./hooks/useUserAddress";
 export { useWriteTransaction } from "./hooks/useWriteTransaction";
 export { useDeposit } from "./hooks/useDeposit";
+export { useClaimDeposit } from "./hooks/useClaimDeposit";
 export { useRequestRedeem } from "./hooks/useRequestRedeem";
 export { useClaimRedeem } from "./hooks/useClaimRedeem";
 export { useCancelRedeem } from "./hooks/useCancelRedeem";

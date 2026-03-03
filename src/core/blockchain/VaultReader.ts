@@ -41,7 +41,7 @@ export class VaultReader {
     const shareDecimals = tokenResults[2].result as number;
     const shareSymbol = tokenResults[3].result as string;
 
-    const vaultType: VaultType = vaultKind === 0 ? 'SYNC' : 'ASYNC';
+    const vaultType: VaultType = vaultKind === 0 ? 'ASYNC' : 'SYNC_DEPOSIT_ASYNC_REDEEM';
 
     return {
       asset, share, assetDecimals, assetSymbol, shareDecimals, shareSymbol,
@@ -53,7 +53,7 @@ export class VaultReader {
     client: PublicClient,
     vaultAddress: Address,
     userAddress: Address,
-    vaultType: VaultType = 'SYNC',
+    vaultType: VaultType = 'ASYNC',
     depositAssetDecimals: number = 6,
   ): Promise<VaultUserState> {
     const isAsync = vaultType === 'ASYNC';

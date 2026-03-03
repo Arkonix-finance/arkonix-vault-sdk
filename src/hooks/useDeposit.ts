@@ -19,7 +19,7 @@ export function useDeposit(
   vaultAddress: Address | undefined,
   depositAssetAddress: Address | undefined,
   depositAssetDecimals: number = 6,
-  vaultType: VaultType = 'SYNC',
+  vaultType: VaultType = 'ASYNC',
 ): UseDepositReturn {
   const { publicClient } = useVaultContext();
   const userAddress = useUserAddress();

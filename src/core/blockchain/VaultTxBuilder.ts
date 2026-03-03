@@ -4,7 +4,7 @@ import type { TransactionRequest, VaultType } from "../../types/transaction";
 
 export class VaultTxBuilder {
   static buildDepositTx(
-    vault: Address, assets: bigint, receiver: Address, vaultType: VaultType = 'SYNC',
+    vault: Address, assets: bigint, receiver: Address, vaultType: VaultType = 'ASYNC',
   ): TransactionRequest {
     if (vaultType === 'ASYNC') {
       return {
@@ -16,6 +16,7 @@ export class VaultTxBuilder {
       };
     }
 
+    // SYNC_DEPOSIT_ASYNC_REDEEM: deposit is synchronous (ERC-4626)
     return {
       to: vault,
       data: encodeFunctionData({
@@ -56,6 +57,22 @@ export class VaultTxBuilder {
       to: vault,
       data: encodeFunctionData({
         abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'redeem', args: [shares, receiver, controller],
+      }),
+      value: 0n,
+    };
+  }
+
+  /**
+   * Claim deposit: for ASYNC vaults, after the epoch processes,
+   * call the ERC-4626 deposit(assets, receiver) to mint shares.
+   */
+  static buildClaimDepositTx(
+    vault: Address, assets: bigint, receiver: Address,
+  ): TransactionRequest {
+    return {
+      to: vault,
+      data: encodeFunctionData({
+        abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'deposit', args: [assets, receiver],
       }),
       value: 0n,
     };
