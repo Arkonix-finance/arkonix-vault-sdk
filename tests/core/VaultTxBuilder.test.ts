@@ -82,25 +82,4 @@ describe("VaultTxBuilder", () => {
     });
   });
 
-  describe("buildCancelRedeemTx", () => {
-    it("encodes cancelRedeemRequest with requestId=0", () => {
-      const tx = VaultTxBuilder.buildCancelRedeemTx(VAULT, USER);
-      expect(tx.to).toBe(VAULT);
-
-      const decoded = decodeFunctionData({ abi: SYNC_DEPOSIT_VAULT_ABI, data: tx.data });
-      expect(decoded.functionName).toBe("cancelRedeemRequest");
-      expect(decoded.args).toEqual([0n, USER]);
-    });
-  });
-
-  describe("buildClaimCancelRedeemTx", () => {
-    it("encodes claimCancelRedeemRequest with requestId=0", () => {
-      const tx = VaultTxBuilder.buildClaimCancelRedeemTx(VAULT, USER, USER);
-      expect(tx.to).toBe(VAULT);
-
-      const decoded = decodeFunctionData({ abi: SYNC_DEPOSIT_VAULT_ABI, data: tx.data });
-      expect(decoded.functionName).toBe("claimCancelRedeemRequest");
-      expect(decoded.args).toEqual([0n, USER, USER]);
-    });
-  });
 });

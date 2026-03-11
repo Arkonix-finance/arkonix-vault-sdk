@@ -128,30 +128,6 @@ describe("VaultActions", () => {
     });
   });
 
-  describe("cancelRedeem", () => {
-    it("sends cancelRedeemRequest transaction", async () => {
-      const client = createMockClient();
-      const sendTx = createMockSendTx();
-
-      const result = await VaultActions.cancelRedeem(client, sendTx, VAULT, USER);
-
-      expect(sendTx).toHaveBeenCalledTimes(1);
-      expect(result.txHash).toBe(TX_HASH);
-    });
-  });
-
-  describe("claimCancelRedeem", () => {
-    it("sends claimCancelRedeemRequest transaction", async () => {
-      const client = createMockClient();
-      const sendTx = createMockSendTx();
-
-      const result = await VaultActions.claimCancelRedeem(client, sendTx, VAULT, USER);
-
-      expect(sendTx).toHaveBeenCalledTimes(1);
-      expect(result.txHash).toBe(TX_HASH);
-    });
-  });
-
   describe("error propagation", () => {
     it("propagates sendTransaction errors", async () => {
       const client = createMockClient(1000_000_000n);

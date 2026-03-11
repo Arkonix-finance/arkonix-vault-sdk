@@ -97,7 +97,6 @@ describe("VaultReader", () => {
           // Batch 1: all zeros
           [
             { result: 0n }, { result: 0n }, { result: 0n },
-            { result: false }, { result: 0n },
           ],
         ],
       });
@@ -105,9 +104,8 @@ describe("VaultReader", () => {
       const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC_DEPOSIT_ASYNC_REDEEM", 6);
 
       expect(state.shareBalance).toBe(0n);
-      expect(state.hasPending).toBe(false);
-      expect(state.hasClaimable).toBe(false);
-      expect(state.hasClaimableCancelRedeem).toBe(false);
+      expect(state.hasPendingRedeem).toBe(false);
+      expect(state.hasClaimableRedeem).toBe(false);
       expect(state.positionValueFormatted).toBe("0");
       expect(state.isLoading).toBe(false);
     });
@@ -119,16 +117,14 @@ describe("VaultReader", () => {
           // Batch 1: share data
           [
             { result: 100n * 10n ** 18n }, // shareBalance
-            { result: 50n * 10n ** 18n },  // pendingShares
-            { result: 25n * 10n ** 18n },  // claimableShares
-            { result: false },
-            { result: 0n },
+            { result: 50n * 10n ** 18n },  // pendingRedeemShares
+            { result: 25n * 10n ** 18n },  // claimableRedeemShares
           ],
-          // Batch 3: conversions (batch 2 skipped for SYNC_DEPOSIT_ASYNC_REDEEM)
+          // Batch 2: conversions (no async deposit for SYNC_DEPOSIT_ASYNC_REDEEM)
           [
             { result: 100000000n }, // positionAssets (100 USDC)
-            { result: 50000000n },  // pendingAssets (50 USDC)
-            { result: 25000000n },  // claimableAssets (25 USDC)
+            { result: 50000000n },  // pendingRedeemAssets (50 USDC)
+            { result: 25000000n },  // claimableRedeemAssets (25 USDC)
           ],
         ],
       });
@@ -136,11 +132,11 @@ describe("VaultReader", () => {
       const state = await VaultReader.getUserState(client, VAULT, USER, "SYNC_DEPOSIT_ASYNC_REDEEM", 6);
 
       expect(state.shareBalance).toBe(100n * 10n ** 18n);
-      expect(state.hasPending).toBe(true);
-      expect(state.hasClaimable).toBe(true);
+      expect(state.hasPendingRedeem).toBe(true);
+      expect(state.hasClaimableRedeem).toBe(true);
       expect(state.positionValueFormatted).toBe("100");
-      expect(state.pendingAssetsFormatted).toBe("50");
-      expect(state.claimableAssetsFormatted).toBe("25");
+      expect(state.pendingRedeemAssetsFormatted).toBe("50");
+      expect(state.claimableRedeemAssetsFormatted).toBe("25");
     });
 
     it("reads async deposit state for ASYNC vaults", async () => {
@@ -148,7 +144,7 @@ describe("VaultReader", () => {
         readContractResult: SHARE,
         multicallResults: [
           // Batch 1
-          [{ result: 0n }, { result: 0n }, { result: 0n }, { result: false }, { result: 0n }],
+          [{ result: 0n }, { result: 0n }, { result: 0n }],
           // Batch 2: async deposit state
           [
             { result: 500000n }, // pendingDepositAssets
@@ -169,7 +165,7 @@ describe("VaultReader", () => {
       const client = createMockClient({
         readContractResult: SHARE,
         multicallResults: [
-          [{ result: 0n }, { result: 0n }, { result: 0n }, { result: false }, { result: 0n }],
+          [{ result: 0n }, { result: 0n }, { result: 0n }],
         ],
       });
 
