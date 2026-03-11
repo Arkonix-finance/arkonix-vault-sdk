@@ -11,8 +11,6 @@ export { useDeposit } from "./hooks/useDeposit";
 export { useClaimDeposit } from "./hooks/useClaimDeposit";
 export { useRequestRedeem } from "./hooks/useRequestRedeem";
 export { useClaimRedeem } from "./hooks/useClaimRedeem";
-export { useCancelRedeem } from "./hooks/useCancelRedeem";
-export { useClaimCancelRedeem } from "./hooks/useClaimCancelRedeem";
 export { useVaultUserState } from "./hooks/useVaultUserState";
 export { useVaultMetadata } from "./hooks/useVaultMetadata";
 

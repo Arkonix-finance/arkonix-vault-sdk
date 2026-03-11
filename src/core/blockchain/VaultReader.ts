@@ -64,22 +64,20 @@ export class VaultReader {
       functionName: 'share',
     }) as Address;
 
+    // Batch 1: Share balance + redeem state
     const batch1 = await client.multicall({
       contracts: [
         { address: share, abi: ERC20_ABI, functionName: 'balanceOf', args: [userAddress] },
         { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'pendingRedeemRequest', args: [ZERO, userAddress] },
         { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'claimableRedeemRequest', args: [ZERO, userAddress] },
-        { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'pendingCancelRedeemRequest', args: [ZERO, userAddress] },
-        { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'claimableCancelRedeemRequest', args: [ZERO, userAddress] },
       ],
     });
 
     const shareBalance = (batch1[0].result as bigint) ?? ZERO;
-    const pendingShares = (batch1[1].result as bigint) ?? ZERO;
-    const claimableShares = (batch1[2].result as bigint) ?? ZERO;
-    const pendingCancelRedeem = (batch1[3].result as boolean) ?? false;
-    const claimableCancelRedeemShares = (batch1[4].result as bigint) ?? ZERO;
+    const pendingRedeemShares = (batch1[1].result as bigint) ?? ZERO;
+    const claimableRedeemShares = (batch1[2].result as bigint) ?? ZERO;
 
+    // Batch 2 (async only): pending/claimable deposit requests
     let pendingDepositAssets = ZERO;
     let claimableDepositAssets = ZERO;
 
@@ -94,43 +92,47 @@ export class VaultReader {
       claimableDepositAssets = (batch2[1].result as bigint) ?? ZERO;
     }
 
+    // Batch 3: Convert shares → assets for display
     let positionAssets = ZERO;
-    let pendingAssets = ZERO;
-    let claimableAssets = ZERO;
+    let pendingRedeemAssets = ZERO;
+    let claimableRedeemAssets = ZERO;
 
-    const hasAnyShares = shareBalance > ZERO || pendingShares > ZERO || claimableShares > ZERO;
+    const hasAnyShares = shareBalance > ZERO || pendingRedeemShares > ZERO || claimableRedeemShares > ZERO;
     if (hasAnyShares) {
       const batch3 = await client.multicall({
         contracts: [
           { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'convertToAssets', args: [shareBalance] },
-          { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'convertToAssets', args: [pendingShares] },
+          { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'convertToAssets', args: [pendingRedeemShares] },
           { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'maxWithdraw', args: [userAddress] },
         ],
       });
       positionAssets = (batch3[0].result as bigint) ?? ZERO;
-      pendingAssets = (batch3[1].result as bigint) ?? ZERO;
-      claimableAssets = (batch3[2].result as bigint) ?? ZERO;
+      pendingRedeemAssets = (batch3[1].result as bigint) ?? ZERO;
+      claimableRedeemAssets = (batch3[2].result as bigint) ?? ZERO;
     }
 
     return {
+      isLoading: false,
+
+      // Position
       shareBalance,
       positionValueFormatted: formatUnits(positionAssets, depositAssetDecimals),
-      pendingShares,
-      pendingAssetsFormatted: formatUnits(pendingAssets, depositAssetDecimals),
-      claimableShares,
-      claimableAssetsFormatted: formatUnits(claimableAssets, depositAssetDecimals),
-      hasPending: pendingShares > ZERO,
-      hasClaimable: claimableShares > ZERO,
-      pendingCancelRedeem,
-      claimableCancelRedeemShares,
-      hasClaimableCancelRedeem: claimableCancelRedeemShares > ZERO,
+
+      // Deposit (async only)
+      hasPendingDeposit: pendingDepositAssets > ZERO,
       pendingDepositAssets,
       pendingDepositFormatted: formatUnits(pendingDepositAssets, depositAssetDecimals),
+      hasClaimableDeposit: claimableDepositAssets > ZERO,
       claimableDepositAssets,
       claimableDepositFormatted: formatUnits(claimableDepositAssets, depositAssetDecimals),
-      hasPendingDeposit: pendingDepositAssets > ZERO,
-      hasClaimableDeposit: claimableDepositAssets > ZERO,
-      isLoading: false,
+
+      // Redeem
+      hasPendingRedeem: pendingRedeemShares > ZERO,
+      pendingRedeemShares,
+      pendingRedeemAssetsFormatted: formatUnits(pendingRedeemAssets, depositAssetDecimals),
+      hasClaimableRedeem: claimableRedeemShares > ZERO,
+      claimableRedeemShares,
+      claimableRedeemAssetsFormatted: formatUnits(claimableRedeemAssets, depositAssetDecimals),
     };
   }
 

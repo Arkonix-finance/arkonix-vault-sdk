@@ -78,29 +78,4 @@ export class VaultTxBuilder {
     };
   }
 
-  // requestId is always 0 — ERC-7540 uses single request per user per vault
-  static buildCancelRedeemTx(
-    vault: Address, controller: Address,
-  ): TransactionRequest {
-    return {
-      to: vault,
-      data: encodeFunctionData({
-        abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'cancelRedeemRequest', args: [0n, controller],
-      }),
-      value: 0n,
-    };
-  }
-
-  // requestId is always 0 — ERC-7540 uses single request per user per vault
-  static buildClaimCancelRedeemTx(
-    vault: Address, receiver: Address, controller: Address,
-  ): TransactionRequest {
-    return {
-      to: vault,
-      data: encodeFunctionData({
-        abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'claimCancelRedeemRequest', args: [0n, receiver, controller],
-      }),
-      value: 0n,
-    };
-  }
 }

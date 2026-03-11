@@ -7,24 +7,24 @@ import { useVaultContext } from "../provider/VaultContext";
 import { useUserAddress } from "./useUserAddress";
 
 const EMPTY_STATE: VaultUserState = {
+  isLoading: true,
+
   shareBalance: 0n,
   positionValueFormatted: '0',
-  pendingShares: 0n,
-  pendingAssetsFormatted: '0',
-  claimableShares: 0n,
-  claimableAssetsFormatted: '0',
-  hasPending: false,
-  hasClaimable: false,
-  pendingCancelRedeem: false,
-  claimableCancelRedeemShares: 0n,
-  hasClaimableCancelRedeem: false,
+
+  hasPendingDeposit: false,
   pendingDepositAssets: 0n,
   pendingDepositFormatted: '0',
+  hasClaimableDeposit: false,
   claimableDepositAssets: 0n,
   claimableDepositFormatted: '0',
-  hasPendingDeposit: false,
-  hasClaimableDeposit: false,
-  isLoading: true,
+
+  hasPendingRedeem: false,
+  pendingRedeemShares: 0n,
+  pendingRedeemAssetsFormatted: '0',
+  hasClaimableRedeem: false,
+  claimableRedeemShares: 0n,
+  claimableRedeemAssetsFormatted: '0',
 };
 
 export function useVaultUserState(

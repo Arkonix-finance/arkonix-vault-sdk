@@ -4,7 +4,5 @@ export { useDeposit } from "./useDeposit";
 export { useClaimDeposit } from "./useClaimDeposit";
 export { useRequestRedeem } from "./useRequestRedeem";
 export { useClaimRedeem } from "./useClaimRedeem";
-export { useCancelRedeem } from "./useCancelRedeem";
-export { useClaimCancelRedeem } from "./useClaimCancelRedeem";
 export { useVaultUserState } from "./useVaultUserState";
 export { useVaultMetadata } from "./useVaultMetadata";

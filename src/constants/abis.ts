@@ -124,48 +124,6 @@ export const SYNC_DEPOSIT_VAULT_ABI = [
     stateMutability: 'nonpayable',
     type: 'function',
   },
-  // Cancel redemption request
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'cancelRedeemRequest',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'pendingCancelRedeemRequest',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'claimableCancelRedeemRequest',
-    outputs: [{ name: 'shares', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'receiver', type: 'address' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'claimCancelRedeemRequest',
-    outputs: [{ name: 'shares', type: 'uint256' }],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
   // Read functions
   {
     inputs: [{ name: 'shares', type: 'uint256' }],
@@ -266,48 +224,6 @@ export const ASYNC_VAULT_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
-  // Cancel Deposit Request
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'cancelDepositRequest',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'pendingCancelDepositRequest',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'claimableCancelDepositRequest',
-    outputs: [{ name: 'assets', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'receiver', type: 'address' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'claimCancelDepositRequest',
-    outputs: [{ name: 'assets', type: 'uint256' }],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
   // Claim Deposit (ERC-4626 deposit used to claim after epoch)
   {
     inputs: [
@@ -383,47 +299,6 @@ export const ASYNC_VAULT_ABI = [
       { name: 'controller', type: 'address' },
     ],
     name: 'withdraw',
-    outputs: [{ name: 'shares', type: 'uint256' }],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'cancelRedeemRequest',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'pendingCancelRedeemRequest',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'claimableCancelRedeemRequest',
-    outputs: [{ name: 'shares', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      { name: 'requestId', type: 'uint256' },
-      { name: 'receiver', type: 'address' },
-      { name: 'controller', type: 'address' },
-    ],
-    name: 'claimCancelRedeemRequest',
     outputs: [{ name: 'shares', type: 'uint256' }],
     stateMutability: 'nonpayable',
     type: 'function',
