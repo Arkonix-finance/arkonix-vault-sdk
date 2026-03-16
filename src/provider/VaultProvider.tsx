@@ -5,6 +5,7 @@ import type { VaultSDKConfig } from "../types/config";
 import type { WalletAdapter } from "../types/wallet";
 import { WebWalletAdapter } from "../core/wallet/WebWalletAdapter";
 import { RNWalletAdapter } from "../core/wallet/RNWalletAdapter";
+import { CentrifugeAPIClient } from "../core/api";
 import { isReactNative } from "../utils";
 import { getChain, DEFAULT_CHAIN } from "../constants/chains";
 
@@ -27,7 +28,12 @@ export function VaultProvider({ config, children, walletAdapter: customWalletAda
       transport: http(config.rpcUrl),
     });
 
-    return { config, walletAdapter, publicClient };
+    // Create CentrifugeAPIClient if configuration is provided
+    const centrifugeAPIClient = config.centrifugeAPI 
+      ? new CentrifugeAPIClient(config.centrifugeAPI)
+      : undefined;
+
+    return { config, walletAdapter, publicClient, centrifugeAPIClient };
   }, [config, customWalletAdapter]);
 
   return (
