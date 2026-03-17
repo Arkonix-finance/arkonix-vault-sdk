@@ -443,6 +443,203 @@ type TxState = 'idle' | 'approving' | 'pending' | 'confirming' | 'success' | 'er
 type VaultType = 'SYNC' | 'ASYNC';
 ```
 
+## Centrifuge API Integration
+
+The SDK includes full integration with the Centrifuge GraphQL API for querying vault holdings and portfolio data.
+
+### Configuration
+
+Add Centrifuge API configuration to your VaultProvider:
+
+```tsx
+<VaultProvider
+  config={{
+    chainId: 42161,
+    rpcUrl: "https://arb1.arbitrum.io/rpc",
+    // Optional: Configure Centrifuge API
+    centrifugeAPI: {
+      apiUrl: "https://api.centrifuge.io", // Default
+      timeout: 30000, // Optional timeout in ms
+    }
+  }}
+>
+  <YourApp />
+</VaultProvider>
+```
+
+### Query Holdings
+
+Get vault holdings filtered by pool ID and token ID:
+
+```tsx
+import { useVaultHoldings, usePoolHoldings } from "@arkonix.xyz/arkonix-vault-sdk";
+
+function VaultHoldings() {
+  // Get holdings for a specific vault (pool + token)
+  const { data: vaultHoldings, isLoading } = useVaultHoldings(
+    "pool-123", 
+    "token-456"
+  );
+
+  // Get all holdings for a pool
+  const { data: poolHoldings } = usePoolHoldings("pool-123");
+
+  // Advanced query with filters
+  const { data: customHoldings } = useCentrifugeHoldings({
+    poolId: "pool-123",
+    tokenId: "token-456",
+    limit: 100,
+    orderBy: "assetAmount",
+    orderDirection: "desc",
+  });
+
+  return (
+    <div>
+      {vaultHoldings?.map(holding => (
+        <div key={holding.id}>
+          <p>Asset: {holding.asset?.symbol}</p>
+          <p>Amount: {holding.assetAmount}</p>
+          <p>Price: {holding.assetPrice}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Query Vaults
+
+Find vaults across the Centrifuge ecosystem:
+
+```tsx
+import { useActiveVaults, usePoolVaults } from "@arkonix.xyz/arkonix-vault-sdk";
+
+function VaultList() {
+  // Get all active vaults
+  const { data: activeVaults } = useActiveVaults();
+
+  // Get vaults for a specific pool
+  const { data: poolVaults } = usePoolVaults("pool-123");
+
+  // Custom vault query
+  const { data: customVaults } = useCentrifugeVaults({
+    poolId: "pool-123",
+    tokenId: "token-456",
+    isActive: true,
+    assetAddress: "0x...", // Filter by deposit asset
+  });
+
+  return (
+    <div>
+      {activeVaults?.map(vault => (
+        <div key={vault.id}>
+          <p>Vault: {vault.id}</p>
+          <p>Pool: {vault.poolId}</p>
+          <p>Token: {vault.tokenId}</p>
+          <p>Network: {vault.blockchain?.network}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Standalone API Client
+
+Use the CentrifugeAPIClient directly without React:
+
+```typescript
+import { CentrifugeAPIClient } from "@arkonix.xyz/arkonix-vault-sdk";
+
+const client = new CentrifugeAPIClient({
+  apiUrl: "https://api.centrifuge.io",
+  timeout: 30000,
+});
+
+// Query holdings
+const holdings = await client.getHoldings({
+  poolId: "pool-123",
+  tokenId: "token-456",
+  limit: 100,
+});
+
+// Get vault holdings
+const vaultHoldings = await client.getVaultHoldings("pool-123", "token-456");
+
+// Get pool holdings
+const poolHoldings = await client.getPoolHoldings("pool-123");
+
+// Query vaults
+const vaults = await client.getVaults({
+  isActive: true,
+  limit: 50,
+});
+```
+
+### Testing the API Integration
+
+Test the Centrifuge API directly:
+
+```bash
+# Install tsx if needed
+npm install -g tsx
+
+# Create a test file: test-api.ts
+cat > test-api.ts << 'EOF'
+import { CentrifugeAPIClient } from "@arkonix.xyz/arkonix-vault-sdk";
+
+async function test() {
+  const client = new CentrifugeAPIClient();
+  
+  // Test fetching holdings
+  const holdings = await client.getHoldings({ limit: 5 });
+  console.log("Holdings:", holdings);
+  
+  // Test fetching vaults
+  const vaults = await client.getVaults({ isActive: true, limit: 5 });
+  console.log("Vaults:", vaults);
+  
+  // If we have a vault, test vault-specific queries
+  if (vaults.length > 0) {
+    const vault = vaults[0];
+    const vaultHoldings = await client.getVaultHoldings(
+      vault.poolId, 
+      vault.tokenId
+    );
+    console.log("Vault holdings:", vaultHoldings);
+  }
+}
+
+test().catch(console.error);
+EOF
+
+# Run the test
+tsx test-api.ts
+```
+
+### Available Query Parameters
+
+**Holdings Query:**
+- `poolId` - Filter by pool ID
+- `tokenId` - Filter by token ID (share class)
+- `centrifugeId` - Filter by Centrifuge chain ID
+- `assetId` - Filter by asset ID
+- `assetAddress` - Filter by asset contract address
+- `limit` - Max results (default 100, max 1000)
+- `orderBy` - Sort field
+- `orderDirection` - 'asc' or 'desc'
+
+**Vaults Query:**
+- `poolId` - Filter by pool ID
+- `tokenId` - Filter by token ID
+- `centrifugeId` - Filter by Centrifuge chain ID
+- `id` - Filter by vault contract address
+- `isActive` - Filter by active status
+- `assetAddress` - Filter by deposit asset
+- `limit` - Max results (default 100, max 1000)
+- `orderBy` - Sort field
+- `orderDirection` - 'asc' or 'desc'
+
 ## Development
 
 ```bash

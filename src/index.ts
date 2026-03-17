@@ -13,6 +13,7 @@ export { useRequestRedeem } from "./hooks/useRequestRedeem";
 export { useClaimRedeem } from "./hooks/useClaimRedeem";
 export { useVaultUserState } from "./hooks/useVaultUserState";
 export { useVaultMetadata } from "./hooks/useVaultMetadata";
+export { useCentrifugeHoldings, useVaultHoldings, usePoolHoldings } from "./hooks/useCentrifugeHoldings";
 
 // Types
 export type {
@@ -26,11 +27,24 @@ export type {
   AddTokenParams,
 } from "./types";
 
+// Centrifuge API Types
+export type {
+  CentrifugeAsset,
+  CentrifugeHoldingEscrow,
+  CentrifugeVault,
+  HoldingsQueryParams,
+  VaultsQueryParams,
+  CentrifugeAPIConfig,
+} from "./types/centrifugeApi";
+
 // Standalone core (no React required)
 export { VaultReader } from "./core/blockchain";
 export { VaultTxBuilder } from "./core/blockchain";
 export { VaultActions } from "./core/blockchain";
 export type { SendTransactionFn, DepositResult, TxResult } from "./core/blockchain";
+
+// Centrifuge API Client
+export { CentrifugeAPIClient } from "./core/api";
 
 // Wallet adapters
 export { WebWalletAdapter, RNWalletAdapter } from "./core/wallet";
