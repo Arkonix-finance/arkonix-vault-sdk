@@ -59,7 +59,10 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install npm with OIDC support
-        run: npm install -g npm@latest
+        run: |
+          # First ensure npm's dependencies are intact
+          npm install -g promise-retry
+          npm install -g npm@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
