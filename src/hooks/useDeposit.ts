@@ -6,6 +6,7 @@ import { VaultTxBuilder } from "../core/blockchain/VaultTxBuilder";
 import { useVaultContext } from "../provider/VaultContext";
 import { useUserAddress } from "./useUserAddress";
 import { useWriteTransaction } from "./useWriteTransaction";
+import { failMutation, handleMutationError } from "./mutationError";
 
 interface UseDepositReturn {
   deposit: (amount: string) => Promise<void>;
@@ -27,14 +28,12 @@ export function useDeposit(
 
   const deposit = useCallback(async (amount: string) => {
     if (!userAddress || !vaultAddress || !depositAssetAddress) {
-      setError('Wallet not connected');
-      return;
+      failMutation("Wallet not connected", setTxState, setError);
     }
 
     const parsedAmount = parseUnits(amount, depositAssetDecimals);
     if (parsedAmount <= 0n) {
-      setError('Amount must be greater than 0');
-      return;
+      failMutation("Amount must be greater than 0", setTxState, setError);
     }
 
     try {
@@ -57,9 +56,8 @@ export function useDeposit(
       setTxState('pending');
       await execute(VaultTxBuilder.buildDepositTx(vaultAddress, parsedAmount, userAddress, vaultType));
       setTxState('success');
-    } catch (err: any) {
-      setTxState('error');
-      setError(err?.shortMessage || err?.message || 'Transaction failed');
+    } catch (err: unknown) {
+      handleMutationError(err, setTxState, setError);
     }
   }, [userAddress, vaultAddress, depositAssetAddress, depositAssetDecimals, vaultType, publicClient, execute, setTxState, setError]);
 

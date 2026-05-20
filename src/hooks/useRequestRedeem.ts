@@ -4,6 +4,7 @@ import type { TxState } from "../types/transaction";
 import { VaultTxBuilder } from "../core/blockchain/VaultTxBuilder";
 import { useUserAddress } from "./useUserAddress";
 import { useWriteTransaction } from "./useWriteTransaction";
+import { failMutation, handleMutationError } from "./mutationError";
 
 interface UseRequestRedeemReturn {
   requestRedeem: (shares: string, shareDecimals?: number) => Promise<void>;
@@ -21,14 +22,12 @@ export function useRequestRedeem(
 
   const requestRedeem = useCallback(async (shares: string, shareDecimals: number = 18) => {
     if (!userAddress || !vaultAddress) {
-      setError('Wallet not connected');
-      return;
+      failMutation("Wallet not connected", setTxState, setError);
     }
 
     const parsedShares = parseUnits(shares, shareDecimals);
     if (parsedShares <= 0n) {
-      setError('Shares must be greater than 0');
-      return;
+      failMutation("Shares must be greater than 0", setTxState, setError);
     }
 
     try {
@@ -36,9 +35,8 @@ export function useRequestRedeem(
       setTxState('pending');
       await execute(VaultTxBuilder.buildRequestRedeemTx(vaultAddress, parsedShares, userAddress, userAddress));
       setTxState('success');
-    } catch (err: any) {
-      setTxState('error');
-      setError(err?.shortMessage || err?.message || 'Transaction failed');
+    } catch (err: unknown) {
+      handleMutationError(err, setTxState, setError);
     }
   }, [userAddress, vaultAddress, execute, setTxState, setError]);
 
