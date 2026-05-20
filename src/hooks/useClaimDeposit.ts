@@ -4,6 +4,7 @@ import type { TxState } from "../types/transaction";
 import { VaultTxBuilder } from "../core/blockchain/VaultTxBuilder";
 import { useUserAddress } from "./useUserAddress";
 import { useWriteTransaction } from "./useWriteTransaction";
+import { failMutation, handleMutationError } from "./mutationError";
 
 interface UseClaimDepositReturn {
   claimDeposit: (assets: bigint) => Promise<void>;
@@ -26,13 +27,11 @@ export function useClaimDeposit(
 
   const claimDeposit = useCallback(async (assets: bigint) => {
     if (!userAddress || !vaultAddress) {
-      setError('Wallet not connected');
-      return;
+      failMutation("Wallet not connected", setTxState, setError);
     }
 
     if (assets <= 0n) {
-      setError('No assets to claim');
-      return;
+      failMutation("No assets to claim", setTxState, setError);
     }
 
     try {
@@ -40,9 +39,8 @@ export function useClaimDeposit(
       setTxState('pending');
       await execute(VaultTxBuilder.buildClaimDepositTx(vaultAddress, assets, userAddress));
       setTxState('success');
-    } catch (err: any) {
-      setTxState('error');
-      setError(err?.shortMessage || err?.message || 'Transaction failed');
+    } catch (err: unknown) {
+      handleMutationError(err, setTxState, setError);
     }
   }, [userAddress, vaultAddress, execute, setTxState, setError]);
 

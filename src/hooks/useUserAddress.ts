@@ -9,11 +9,22 @@ export function useUserAddress(): Address | null {
   useEffect(() => {
     let cancelled = false;
 
-    walletAdapter.getAddress().then((addr) => {
+    const refresh = () => {
+      walletAdapter.getAddress().then((addr) => {
+        if (!cancelled) setAddress(addr);
+      });
+    };
+
+    refresh();
+
+    const unsubscribe = walletAdapter.onAccountsChanged?.((addr) => {
       if (!cancelled) setAddress(addr);
     });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, [walletAdapter]);
 
   return address;

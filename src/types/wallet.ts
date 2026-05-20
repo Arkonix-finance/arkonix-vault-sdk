@@ -8,6 +8,8 @@ export interface WalletAdapter {
   sendTransaction(tx: TransactionRequest): Promise<string>;
   isConnected(): boolean;
   platform: "web" | "native";
+  /** Subscribe to wallet connect, disconnect, and account changes. */
+  onAccountsChanged?(callback: (address: Address | null) => void): () => void;
 }
 
 export interface AddTokenParams {

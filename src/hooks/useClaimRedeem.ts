@@ -4,6 +4,7 @@ import type { TxState } from "../types/transaction";
 import { VaultTxBuilder } from "../core/blockchain/VaultTxBuilder";
 import { useUserAddress } from "./useUserAddress";
 import { useWriteTransaction } from "./useWriteTransaction";
+import { failMutation, handleMutationError } from "./mutationError";
 
 interface UseClaimRedeemReturn {
   claimRedeem: (shares: bigint) => Promise<void>;
@@ -21,13 +22,11 @@ export function useClaimRedeem(
 
   const claimRedeem = useCallback(async (shares: bigint) => {
     if (!userAddress || !vaultAddress) {
-      setError('Wallet not connected');
-      return;
+      failMutation("Wallet not connected", setTxState, setError);
     }
 
     if (shares <= 0n) {
-      setError('No shares to claim');
-      return;
+      failMutation("No shares to claim", setTxState, setError);
     }
 
     try {
@@ -35,9 +34,8 @@ export function useClaimRedeem(
       setTxState('pending');
       await execute(VaultTxBuilder.buildClaimRedeemTx(vaultAddress, shares, userAddress, userAddress));
       setTxState('success');
-    } catch (err: any) {
-      setTxState('error');
-      setError(err?.shortMessage || err?.message || 'Transaction failed');
+    } catch (err: unknown) {
+      handleMutationError(err, setTxState, setError);
     }
   }, [userAddress, vaultAddress, execute, setTxState, setError]);
 

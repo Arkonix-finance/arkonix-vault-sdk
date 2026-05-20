@@ -16,14 +16,65 @@ function getEthereum(): EthereumProvider | undefined {
 export class WebWalletAdapter implements WalletAdapter {
   platform = "web" as const;
   private currentAddress: Address | null = null;
+  private accountListeners = new Set<(address: Address | null) => void>();
+  private boundAccountsChanged?: (accounts: string[]) => void;
+  private boundConnect?: () => void;
+  private boundDisconnect?: () => void;
 
   constructor() {
     const ethereum = getEthereum();
-    if (ethereum) {
-      ethereum.on?.("accountsChanged", (accounts: string[]) => {
-        this.currentAddress = (accounts[0] as Address) || null;
-      });
+    if (!ethereum) return;
+
+    this.boundAccountsChanged = (accounts: string[]) => {
+      this.setAddress((accounts[0] as Address) || null);
+    };
+    this.boundConnect = () => {
+      void this.refreshAddressFromProvider();
+    };
+    this.boundDisconnect = () => {
+      this.setAddress(null);
+    };
+
+    ethereum.on?.("accountsChanged", this.boundAccountsChanged);
+    ethereum.on?.("connect", this.boundConnect);
+    ethereum.on?.("disconnect", this.boundDisconnect);
+  }
+
+  onAccountsChanged(callback: (address: Address | null) => void): () => void {
+    this.accountListeners.add(callback);
+    return () => {
+      this.accountListeners.delete(callback);
+    };
+  }
+
+  private notifyAccountListeners(): void {
+    const address = this.currentAddress;
+    for (const listener of this.accountListeners) {
+      listener(address);
     }
+  }
+
+  private setAddress(address: Address | null): void {
+    this.currentAddress = address;
+    this.notifyAccountListeners();
+  }
+
+  private async refreshAddressFromProvider(): Promise<void> {
+    const ethereum = getEthereum();
+    if (!ethereum) {
+      this.setAddress(null);
+      return;
+    }
+
+    try {
+      const accounts = await ethereum.request({ method: "eth_accounts" });
+      if (accounts && accounts.length > 0) {
+        this.setAddress(accounts[0] as Address);
+        return;
+      }
+    } catch {}
+
+    this.setAddress(null);
   }
 
   async connect(): Promise<Address> {
@@ -37,29 +88,20 @@ export class WebWalletAdapter implements WalletAdapter {
       throw new Error("No accounts found. Please connect your wallet.");
     }
 
-    this.currentAddress = accounts[0] as Address;
-    return this.currentAddress;
+    const address = accounts[0] as Address;
+    this.setAddress(address);
+    return address;
   }
 
   async disconnect(): Promise<void> {
-    this.currentAddress = null;
+    this.setAddress(null);
   }
 
   async getAddress(): Promise<Address | null> {
     if (this.currentAddress) return this.currentAddress;
 
-    const ethereum = getEthereum();
-    if (!ethereum) return null;
-
-    try {
-      const accounts = await ethereum.request({ method: "eth_accounts" });
-      if (accounts && accounts.length > 0) {
-        this.currentAddress = accounts[0] as Address;
-        return this.currentAddress;
-      }
-    } catch {}
-
-    return null;
+    await this.refreshAddressFromProvider();
+    return this.currentAddress;
   }
 
   async sendTransaction(tx: TransactionRequest): Promise<string> {
