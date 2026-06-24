@@ -57,7 +57,9 @@ export class WebWalletAdapter implements WalletAdapter {
         this.currentAddress = accounts[0] as Address;
         return this.currentAddress;
       }
-    } catch {}
+    } catch {
+      // No connected accounts (or provider rejected) — treat as not connected.
+    }
 
     return null;
   }

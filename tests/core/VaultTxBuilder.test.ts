@@ -82,4 +82,43 @@ describe("VaultTxBuilder", () => {
     });
   });
 
+  describe("buildCancelRedeemTx", () => {
+    it("encodes cancelRedeemRequest(requestId=0, controller)", () => {
+      const tx = VaultTxBuilder.buildCancelRedeemTx(VAULT, USER);
+      expect(tx.to).toBe(VAULT);
+      expect(tx.value).toBe(0n);
+
+      const decoded = decodeFunctionData({ abi: SYNC_DEPOSIT_VAULT_ABI, data: tx.data });
+      expect(decoded.functionName).toBe("cancelRedeemRequest");
+      expect(decoded.args).toEqual([0n, USER]);
+    });
+  });
+
+  describe("buildClaimCancelRedeemTx", () => {
+    it("encodes claimCancelRedeemRequest(requestId=0, receiver, controller)", () => {
+      const tx = VaultTxBuilder.buildClaimCancelRedeemTx(VAULT, USER, USER);
+      const decoded = decodeFunctionData({ abi: SYNC_DEPOSIT_VAULT_ABI, data: tx.data });
+      expect(decoded.functionName).toBe("claimCancelRedeemRequest");
+      expect(decoded.args).toEqual([0n, USER, USER]);
+    });
+  });
+
+  describe("buildCancelDepositTx", () => {
+    it("encodes cancelDepositRequest(requestId=0, controller)", () => {
+      const tx = VaultTxBuilder.buildCancelDepositTx(VAULT, USER);
+      const decoded = decodeFunctionData({ abi: ASYNC_VAULT_ABI, data: tx.data });
+      expect(decoded.functionName).toBe("cancelDepositRequest");
+      expect(decoded.args).toEqual([0n, USER]);
+    });
+  });
+
+  describe("buildClaimCancelDepositTx", () => {
+    it("encodes claimCancelDepositRequest(requestId=0, receiver, controller)", () => {
+      const tx = VaultTxBuilder.buildClaimCancelDepositTx(VAULT, USER, USER);
+      const decoded = decodeFunctionData({ abi: ASYNC_VAULT_ABI, data: tx.data });
+      expect(decoded.functionName).toBe("claimCancelDepositRequest");
+      expect(decoded.args).toEqual([0n, USER, USER]);
+    });
+  });
+
 });

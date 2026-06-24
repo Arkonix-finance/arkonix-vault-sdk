@@ -10,7 +10,7 @@ npm install @arkonix.xyz/arkonix-vault-sdk viem @tanstack/react-query
 pnpm add @arkonix.xyz/arkonix-vault-sdk viem @tanstack/react-query
 ```
 
-**Peer dependencies:** `react >= 18.0.0`
+`viem` and `@tanstack/react-query` are required dependencies (installed via the command above). **Peer dependencies:** `react >= 18.0.0`. `react-native` (`>=0.70.0`) is an optional peer dependency — only needed for React Native apps.
 
 ## Setup
 
@@ -165,9 +165,9 @@ const { txHash } = await VaultActions.requestRedeem(
 );
 
 // After epoch executes, claim the redeem
-if (state.hasClaimable) {
+if (state.hasClaimableRedeem) {
   await VaultActions.claimRedeem(
-    client, sendTransaction, vaultAddress, state.claimableShares, userAddress
+    client, sendTransaction, vaultAddress, state.claimableRedeemShares, userAddress
   );
 }
 ```
@@ -219,11 +219,11 @@ function UserPosition({ vaultAddress }: { vaultAddress: `0x${string}` }) {
   return (
     <div>
       <p>Position Value: ${state.positionValueFormatted}</p>
-      {state.hasPending && (
-        <p>Pending Redeem: {state.pendingAssetsFormatted} {meta?.assetSymbol}</p>
+      {state.hasPendingRedeem && (
+        <p>Pending Redeem: {state.pendingRedeemAssetsFormatted} {meta?.assetSymbol}</p>
       )}
-      {state.hasClaimable && (
-        <p>Claimable: {state.claimableAssetsFormatted} {meta?.assetSymbol}</p>
+      {state.hasClaimableRedeem && (
+        <p>Claimable: {state.claimableRedeemAssetsFormatted} {meta?.assetSymbol}</p>
       )}
     </div>
   );
@@ -283,14 +283,14 @@ function RedeemFlow({ vaultAddress, meta }) {
       )}
 
       {/* Step 2: Wait for epoch execution (shown when pending) */}
-      {state.hasPending && (
-        <p>Pending redeem: ~{state.pendingAssetsFormatted} {meta.assetSymbol}</p>
+      {state.hasPendingRedeem && (
+        <p>Pending redeem: ~{state.pendingRedeemAssetsFormatted} {meta.assetSymbol}</p>
       )}
 
       {/* Step 3: Claim (shown when claimable after epoch) */}
-      {state.hasClaimable && (
-        <button onClick={() => claimRedeem(state.claimableShares)}>
-          Claim {state.claimableAssetsFormatted} {meta.assetSymbol}
+      {state.hasClaimableRedeem && (
+        <button onClick={() => claimRedeem(state.claimableRedeemShares)}>
+          Claim {state.claimableRedeemAssetsFormatted} {meta.assetSymbol}
         </button>
       )}
     </div>
@@ -300,27 +300,91 @@ function RedeemFlow({ vaultAddress, meta }) {
 
 ### 5. Cancel Redeem
 
-```tsx
-import { useCancelRedeem, useClaimCancelRedeem } from "@arkonix.xyz/arkonix-vault-sdk";
+A single `useCancelRedeem(vaultAddress)` hook returns both `cancelRedeem()` and
+`claimCancelRedeem()`. (For async deposits, `useCancelDeposit` mirrors this.)
 
-function CancelRedeem({ vaultAddress, state }) {
-  const { cancelRedeem } = useCancelRedeem(vaultAddress);
-  const { claimCancelRedeem } = useClaimCancelRedeem(vaultAddress);
+```tsx
+import { useCancelRedeem, useVaultUserState } from "@arkonix.xyz/arkonix-vault-sdk";
+
+function CancelRedeem({ vaultAddress, meta }) {
+  const state = useVaultUserState(vaultAddress, meta.share, meta.assetDecimals, meta.vaultType);
+  const { cancelRedeem, claimCancelRedeem } = useCancelRedeem(vaultAddress);
 
   return (
     <div>
       {/* Cancel a pending redeem request */}
-      {state.hasPending && (
+      {state.hasPendingRedeem && (
         <button onClick={cancelRedeem}>Cancel Redeem</button>
       )}
 
-      {/* Claim shares back after cancel is processed */}
+      {/* Claim shares back after the cancellation is processed by the epoch */}
       {state.hasClaimableCancelRedeem && (
         <button onClick={claimCancelRedeem}>Claim Cancelled Shares</button>
       )}
     </div>
   );
 }
+```
+
+### 6. NAV, APY & Share Price
+
+NAV (TVL), APY, and share price are **not on-chain** — they come from the Arkonix
+backend's public API. Configure a base URL once, then read everything from the vault
+address alone. This is the address-only entry point for a partner UI.
+
+```tsx
+<VaultProvider
+  config={{
+    chainId: 42161,
+    rpcUrl: "https://arb1.arbitrum.io/rpc",
+    arkonixAPI: { baseUrl: "https://api.arkonix.xyz" },
+  }}
+>
+  <VaultDashboard vaultAddress="0x..." />
+</VaultProvider>;
+```
+
+```tsx
+import {
+  useVaultFinancials,
+  useApyHistory,
+} from "@arkonix.xyz/arkonix-vault-sdk";
+
+function VaultDashboard({ vaultAddress }: { vaultAddress: `0x${string}` }) {
+  const { data: fin, isLoading } = useVaultFinancials(vaultAddress);
+
+  // History endpoints are keyed by share-class id, which the snapshot returns.
+  const { data: apy } = useApyHistory(fin?.shareClassId, { days: 90 });
+
+  if (isLoading || !fin) return <div>Loading…</div>;
+
+  return (
+    <div>
+      <p>NAV (TVL): ${fin.tvlUsd.toLocaleString()}</p>
+      <p>Share price: {fin.sharePrice ?? "—"}</p>
+      {/* APY is nullable — null means "not enough history", which is NOT 0% */}
+      <p>APY (7d): {fin.apy7d != null ? `${fin.apy7d}%` : "—"}</p>
+      <p>APY (30d): {fin.apy30d != null ? `${fin.apy30d}%` : "—"}</p>
+      {apy && <SparklineChart points={apy.points} />}
+    </div>
+  );
+}
+```
+
+> **APY semantics:** `apy7d`/`apy30d`/`apy90d`/`apyAllTime` are percentages
+> (`12.5` = 12.5%) and **nullable** — `null` means there isn't enough valid price
+> history for that window (common on young vaults). Never treat `null` as `0`. The
+> headline APYs are daily-cached; the `points` series is live (~15-min), so they
+> won't reconcile exactly — by design.
+
+You can also use the client standalone (no React):
+
+```typescript
+import { ArkonixAPIClient } from "@arkonix.xyz/arkonix-vault-sdk";
+
+const api = new ArkonixAPIClient({ baseUrl: "https://api.arkonix.xyz" });
+const fin = await api.getVaultFinancials("0x...");
+const apy = await api.getApyHistory(fin.shareClassId, { days: 30 });
 ```
 
 ## ERC-7540 Flow
@@ -357,11 +421,16 @@ CANCEL REDEEM:
 |------|---------|
 | `useVaultMetadata(vaultAddress)` | Read asset, share token, decimals, vault type from on-chain |
 | `useVaultUserState(vault, share, decimals, type)` | Read user's position, pending/claimable states |
-| `useDeposit(vault, asset, decimals, type)` | Approve + deposit (SYNC) or requestDeposit (ASYNC) |
+| `useDeposit(vault, asset, decimals, type)` | Approve + deposit (SYNC_DEPOSIT) or requestDeposit (ASYNC) |
+| `useClaimDeposit(vault)` | Claim shares after an async deposit is processed |
 | `useRequestRedeem(vault)` | Request async redeem |
 | `useClaimRedeem(vault)` | Claim completed redeem |
-| `useCancelRedeem(vault)` | Cancel pending redeem request |
-| `useClaimCancelRedeem(vault)` | Claim shares after cancel |
+| `useCancelRedeem(vault)` | `cancelRedeem()` + `claimCancelRedeem()` |
+| `useCancelDeposit(vault, type)` | `cancelDeposit()` + `claimCancelDeposit()` (ASYNC only; pass `type` to fail early on others) |
+| `useVaultFinancials(vault)` | **NAV/TVL, share price, all APYs** from the Arkonix API |
+| `useApyHistory(shareClassId, { days })` | APY headlines + cumulative-return series |
+| `useTvlHistory(shareClassId, { days })` | TVL (NAV) time series |
+| `useSharePriceHistory(vault)` | On-chain share-price event history |
 | `useUserAddress()` | Get connected wallet address |
 | `useVaultContext()` | Access config, walletAdapter, publicClient |
 
@@ -372,10 +441,13 @@ CANCEL REDEEM:
 | Method | Purpose |
 |--------|---------|
 | `VaultActions.deposit(client, sendTx, vault, amount, user, asset, decimals, type)` | Full deposit: allowance check + approve + deposit |
+| `VaultActions.claimDeposit(client, sendTx, vault, assets, user)` | Claim shares after an async deposit is processed |
 | `VaultActions.requestRedeem(client, sendTx, vault, shares, user, decimals)` | Request async redeem |
 | `VaultActions.claimRedeem(client, sendTx, vault, shares, user)` | Claim completed redeem |
 | `VaultActions.cancelRedeem(client, sendTx, vault, user)` | Cancel pending redeem |
-| `VaultActions.claimCancelRedeem(client, sendTx, vault, user)` | Claim shares after cancel |
+| `VaultActions.claimCancelRedeem(client, sendTx, vault, user)` | Claim shares after cancelling a redeem |
+| `VaultActions.cancelDeposit(client, sendTx, vault, user)` | Cancel pending deposit (ASYNC only) |
+| `VaultActions.claimCancelDeposit(client, sendTx, vault, user)` | Claim assets after cancelling a deposit (ASYNC only) |
 
 ### VaultReader (read-only)
 
@@ -398,8 +470,11 @@ CANCEL REDEEM:
 | `VaultTxBuilder.buildApproveTx(token, spender, amount)` | Build ERC20 approve calldata |
 | `VaultTxBuilder.buildRequestRedeemTx(vault, shares, controller, owner)` | Build redeem request calldata |
 | `VaultTxBuilder.buildClaimRedeemTx(vault, shares, receiver, controller)` | Build claim redeem calldata |
+| `VaultTxBuilder.buildClaimDepositTx(vault, assets, receiver)` | Build claim deposit calldata (ERC-4626 deposit) |
 | `VaultTxBuilder.buildCancelRedeemTx(vault, controller)` | Build cancel redeem calldata |
-| `VaultTxBuilder.buildClaimCancelRedeemTx(vault, receiver, controller)` | Build claim cancel calldata |
+| `VaultTxBuilder.buildClaimCancelRedeemTx(vault, receiver, controller)` | Build claim cancel redeem calldata |
+| `VaultTxBuilder.buildCancelDepositTx(vault, controller)` | Build cancel deposit calldata |
+| `VaultTxBuilder.buildClaimCancelDepositTx(vault, receiver, controller)` | Build claim cancel deposit calldata |
 
 ## Types
 
@@ -412,35 +487,51 @@ interface VaultMetadata {
   assetSymbol: string;      // e.g. "USDC"
   shareSymbol: string;
   poolId: bigint;
-  vaultKind: number;        // 0 = SYNC, 1 = ASYNC
-  vaultType: 'SYNC' | 'ASYNC';
+  vaultKind: number;        // on-chain: 0 → ASYNC, otherwise SYNC_DEPOSIT_ASYNC_REDEEM
+  vaultType: VaultType;
   totalAssets: bigint;
 }
 
 interface VaultUserState {
+  isLoading: boolean;
+
+  // Position
   shareBalance: bigint;
   positionValueFormatted: string;
-  pendingShares: bigint;
-  pendingAssetsFormatted: string;
-  claimableShares: bigint;
-  claimableAssetsFormatted: string;
-  hasPending: boolean;
-  hasClaimable: boolean;
-  pendingCancelRedeem: boolean;
-  claimableCancelRedeemShares: bigint;
-  hasClaimableCancelRedeem: boolean;
-  // ASYNC vault only:
+
+  // Deposit flow (ASYNC vaults only)
+  hasPendingDeposit: boolean;
   pendingDepositAssets: bigint;
   pendingDepositFormatted: string;
+  hasClaimableDeposit: boolean;
   claimableDepositAssets: bigint;
   claimableDepositFormatted: string;
-  hasPendingDeposit: boolean;
-  hasClaimableDeposit: boolean;
-  isLoading: boolean;
+
+  // Redeem flow (both vault types)
+  hasPendingRedeem: boolean;
+  pendingRedeemShares: bigint;
+  pendingRedeemAssetsFormatted: string;
+  hasClaimableRedeem: boolean;
+  claimableRedeemShares: bigint;
+  claimableRedeemAssetsFormatted: string;
+
+  // Cancel redeem
+  hasPendingCancelRedeem: boolean;
+  claimableCancelRedeemShares: bigint;
+  hasClaimableCancelRedeem: boolean;
+
+  // Cancel deposit (ASYNC vaults only)
+  hasPendingCancelDeposit: boolean;
+  claimableCancelDepositAssets: bigint;
+  claimableCancelDepositFormatted: string;
+  hasClaimableCancelDeposit: boolean;
 }
 
 type TxState = 'idle' | 'approving' | 'pending' | 'confirming' | 'success' | 'error';
-type VaultType = 'SYNC' | 'ASYNC';
+
+// 'ASYNC': requestDeposit + requestRedeem are both async.
+// 'SYNC_DEPOSIT_ASYNC_REDEEM': deposit is synchronous (ERC-4626), redeem is async.
+type VaultType = 'ASYNC' | 'SYNC_DEPOSIT_ASYNC_REDEEM';
 ```
 
 ## Centrifuge API Integration

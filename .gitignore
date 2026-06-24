@@ -26,3 +26,7 @@ Thumbs.db
 
 # Development documentation (implementation notes, not user-facing)
 dev-docs/
+
+# Claude Code — local/personal (committed: CLAUDE.md, .claude/settings.json, agents, skills, hooks)
+CLAUDE.local.md
+.claude/settings.local.json

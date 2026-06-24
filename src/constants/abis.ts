@@ -124,6 +124,48 @@ export const SYNC_DEPOSIT_VAULT_ABI = [
     stateMutability: 'nonpayable',
     type: 'function',
   },
+  // Cancel redeem (ERC-7540 / ERC-7887)
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'cancelRedeemRequest',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'receiver', type: 'address' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'claimCancelRedeemRequest',
+    outputs: [{ name: 'shares', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'pendingCancelRedeemRequest',
+    outputs: [{ name: 'isPending', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'claimableCancelRedeemRequest',
+    outputs: [{ name: 'shares', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
   // Read functions
   {
     inputs: [{ name: 'shares', type: 'uint256' }],
@@ -220,6 +262,48 @@ export const ASYNC_VAULT_ABI = [
       { name: 'controller', type: 'address' },
     ],
     name: 'claimableDepositRequest',
+    outputs: [{ name: 'assets', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  // Cancel Deposit (ERC-7540 / ERC-7887)
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'cancelDepositRequest',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'receiver', type: 'address' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'claimCancelDepositRequest',
+    outputs: [{ name: 'assets', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'pendingCancelDepositRequest',
+    outputs: [{ name: 'isPending', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: 'requestId', type: 'uint256' },
+      { name: 'controller', type: 'address' },
+    ],
+    name: 'claimableCancelDepositRequest',
     outputs: [{ name: 'assets', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',

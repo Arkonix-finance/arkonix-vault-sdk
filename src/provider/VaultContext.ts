@@ -2,12 +2,13 @@ import { createContext, useContext } from "react";
 import type { PublicClient } from "viem";
 import type { VaultSDKConfig } from "../types/config";
 import type { WalletAdapter } from "../types/wallet";
-import type { CentrifugeAPIClient } from "../core/api";
+import type { ArkonixAPIClient, CentrifugeAPIClient } from "../core/api";
 
 export interface VaultContextValue {
   config: VaultSDKConfig;
   walletAdapter: WalletAdapter;
   publicClient: PublicClient;
+  arkonixAPIClient?: ArkonixAPIClient;
   centrifugeAPIClient?: CentrifugeAPIClient;
 }
 

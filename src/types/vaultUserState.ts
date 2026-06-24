@@ -54,4 +54,29 @@ export interface VaultUserState {
   claimableRedeemShares: bigint;
   /** Claimable redeem value in assets (locked at epoch price) */
   claimableRedeemAssetsFormatted: string;
+
+  // ---------------------------------------------------------------------------
+  // Cancel flows (ERC-7540)
+  //
+  //   cancelRedeemRequest()       → hasPendingCancelRedeem = true
+  //   [epoch executes]            → hasClaimableCancelRedeem = true
+  //   claimCancelRedeemRequest()  → user receives their shares back
+  // (cancelDeposit mirrors this, returning assets instead of shares)
+  // ---------------------------------------------------------------------------
+
+  /** A cancel-redeem request is pending the next epoch */
+  hasPendingCancelRedeem: boolean;
+  /** Shares ready to reclaim after a processed redeem cancellation */
+  claimableCancelRedeemShares: bigint;
+  /** Whether there are shares to reclaim from a cancelled redeem */
+  hasClaimableCancelRedeem: boolean;
+
+  /** A cancel-deposit request is pending the next epoch (ASYNC vaults only) */
+  hasPendingCancelDeposit: boolean;
+  /** Assets ready to reclaim after a processed deposit cancellation */
+  claimableCancelDepositAssets: bigint;
+  /** Formatted claimable cancel-deposit amount */
+  claimableCancelDepositFormatted: string;
+  /** Whether there are assets to reclaim from a cancelled deposit */
+  hasClaimableCancelDeposit: boolean;
 }
