@@ -21,14 +21,14 @@ interface UseCancelDepositReturn {
 
 /**
  * Cancel a pending deposit request and, once the epoch processes it, reclaim assets.
- * ASYNC vaults only (SYNC_DEPOSIT_ASYNC_REDEEM deposits settle immediately) — pass the
- * vault's `vaultType` so a non-ASYNC vault fails early with a clear error instead of
- * reverting on-chain.
+ * ASYNC vaults only (SYNC_DEPOSIT_ASYNC_REDEEM deposits settle immediately). `vaultType`
+ * is required (pass `meta.vaultType` from `useVaultMetadata`); a non-ASYNC or undefined
+ * type fails early with a clear error instead of reverting on-chain.
  *   cancelDeposit() → [epoch] → claimCancelDeposit()
  */
 export function useCancelDeposit(
   vaultAddress: Address | undefined,
-  vaultType: VaultType = 'ASYNC',
+  vaultType: VaultType | undefined,
 ): UseCancelDepositReturn {
   const userAddress = useUserAddress();
   const { execute, txState, txHash, error, reset, setTxState, setError } = useWriteTransaction();
