@@ -9,10 +9,10 @@ export { useCancelDeposit } from "./useCancelDeposit";
 export { useVaultUserState } from "./useVaultUserState";
 export { useVaultMetadata } from "./useVaultMetadata";
 
-// Arkonix financial-data hooks (NAV / APY / share price / history)
+// Arkonix financial-data hooks (NAV / returns / share price / history)
 export {
   useVaultFinancials,
-  useApyHistory,
+  useReturnHistory,
   useTvlHistory,
   useSharePriceHistory,
 } from "./useVaultFinancials";

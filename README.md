@@ -326,9 +326,9 @@ function CancelRedeem({ vaultAddress, meta }) {
 }
 ```
 
-### 6. NAV, APY & Share Price
+### 6. NAV, Returns & Share Price
 
-NAV (TVL), APY, and share price are **not on-chain** — they come from the Arkonix
+NAV (TVL), returns, and share price are **not on-chain** — they come from the Arkonix
 backend's public API. Configure a base URL once, then read everything from the vault
 address alone. This is the address-only entry point for a partner UI.
 
@@ -347,14 +347,14 @@ address alone. This is the address-only entry point for a partner UI.
 ```tsx
 import {
   useVaultFinancials,
-  useApyHistory,
+  useReturnHistory,
 } from "@arkonix.xyz/arkonix-vault-sdk";
 
 function VaultDashboard({ vaultAddress }: { vaultAddress: `0x${string}` }) {
   const { data: fin, isLoading } = useVaultFinancials(vaultAddress);
 
   // History endpoints are keyed by share-class id, which the snapshot returns.
-  const { data: apy } = useApyHistory(fin?.shareClassId, { days: 90 });
+  const { data: history } = useReturnHistory(fin?.shareClassId, { days: 90 });
 
   if (isLoading || !fin) return <div>Loading…</div>;
 
@@ -362,20 +362,31 @@ function VaultDashboard({ vaultAddress }: { vaultAddress: `0x${string}` }) {
     <div>
       <p>NAV (TVL): ${fin.tvlUsd.toLocaleString()}</p>
       <p>Share price: {fin.sharePrice ?? "—"}</p>
-      {/* APY is nullable — null means "not enough history", which is NOT 0% */}
-      <p>APY (7d): {fin.apy7d != null ? `${fin.apy7d}%` : "—"}</p>
-      <p>APY (30d): {fin.apy30d != null ? `${fin.apy30d}%` : "—"}</p>
-      {apy && <SparklineChart points={apy.points} />}
+      {/* return* is nullable — null means "not enough history", which is NOT 0% */}
+      <p>Return (7d): {fin.return7d != null ? `${fin.return7d}%` : "—"}</p>
+      <p>Return (30d): {fin.return30d != null ? `${fin.return30d}%` : "—"}</p>
+      <p>Return (all-time, annualized): {fin.returnAllTime != null ? `${fin.returnAllTime}%` : "—"}</p>
+      {history && <SparklineChart points={history.points} />}
     </div>
   );
 }
 ```
 
-> **APY semantics:** `apy7d`/`apy30d`/`apy90d`/`apyAllTime` are percentages
-> (`12.5` = 12.5%) and **nullable** — `null` means there isn't enough valid price
-> history for that window (common on young vaults). Never treat `null` as `0`. The
-> headline APYs are daily-cached; the `points` series is live (~15-min), so they
-> won't reconcile exactly — by design.
+> **Return semantics:** all `return*` fields are percentages (`12.5` = 12.5%) and
+> **nullable** — `null` means there isn't enough valid price history for that window
+> (common on young vaults). Never treat `null` as `0`.
+> - `return7d` / `return30d` / `return90d` are **cumulative** % over the window (a
+>   −7% month reads `-7`, not annualized). They can't explode.
+> - `returnAllTime` is the **only annualized** field anywhere in the API — annualized
+>   since inception for vaults with ≥30 days of history, otherwise cumulative.
+>   Bounded ~[−99, +1000].
+> - Headline `return*` are daily-cached; the `points` series is live (~15-min), so
+>   the chart's last point will NOT equal `returnAllTime`. To chart the all-time
+>   **cumulative** curve, use the per-point `cumulativeReturnSinceInceptionPct`
+>   (absolute since launch), not the window-relative `cumulativeReturnPct`.
+> - Both per-point fields are **cumulative** — there is **no per-point annualized
+>   series**. Don't try to chart annualized APY over time from `points`; the single
+>   annualized figure is `returnAllTime`.
 
 You can also use the client standalone (no React):
 
@@ -384,7 +395,7 @@ import { ArkonixAPIClient } from "@arkonix.xyz/arkonix-vault-sdk";
 
 const api = new ArkonixAPIClient({ baseUrl: "https://api.arkonix.xyz" });
 const fin = await api.getVaultFinancials("0x...");
-const apy = await api.getApyHistory(fin.shareClassId, { days: 30 });
+const history = await api.getReturnHistory(fin.shareClassId, { days: 30 });
 ```
 
 ## ERC-7540 Flow
@@ -427,8 +438,8 @@ CANCEL REDEEM:
 | `useClaimRedeem(vault)` | Claim completed redeem |
 | `useCancelRedeem(vault)` | `cancelRedeem()` + `claimCancelRedeem()` |
 | `useCancelDeposit(vault, type)` | `cancelDeposit()` + `claimCancelDeposit()` (ASYNC only; pass `type` to fail early on others) |
-| `useVaultFinancials(vault)` | **NAV/TVL, share price, all APYs** from the Arkonix API |
-| `useApyHistory(shareClassId, { days })` | APY headlines + cumulative-return series |
+| `useVaultFinancials(vault)` | **NAV/TVL, share price, all returns** from the Arkonix API |
+| `useReturnHistory(shareClassId, { days })` | Return headlines + per-point return series |
 | `useTvlHistory(shareClassId, { days })` | TVL (NAV) time series |
 | `useSharePriceHistory(vault)` | On-chain share-price event history |
 | `useUserAddress()` | Get connected wallet address |

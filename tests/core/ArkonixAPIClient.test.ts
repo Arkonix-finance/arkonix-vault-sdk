@@ -49,21 +49,21 @@ describe("ArkonixAPIClient", () => {
       expect(fin.symbol).toBe("DGI");
       expect(fin.tvlUsd).toBe(1234.56);
       expect(fin.sharePrice).toBe(0.9862);
-      expect(fin.apy7d).toBe(12.5);
-      expect(fin.apy30d).toBeNull();
-      expect(fin.apy90d).toBeNull();
-      expect(fin.apyAllTime).toBe(-50.05);
+      expect(fin.return7d).toBe(12.5);
+      expect(fin.return30d).toBeNull();
+      expect(fin.return90d).toBeNull();
+      expect(fin.returnAllTime).toBe(-50.05);
       expect(fin.vaults).toEqual([
         { vaultAddress: VAULT, chainId: 42161, chainName: "Arbitrum" },
       ]);
     });
 
-    it("preserves null APY (does not coerce to 0)", async () => {
-      vi.stubGlobal("fetch", mockFetchOnce(rawVaultDetail({ apy_7d: null })));
+    it("preserves null return (does not coerce to 0)", async () => {
+      vi.stubGlobal("fetch", mockFetchOnce(rawVaultDetail({ return_7d_pct: null })));
       const client = new ArkonixAPIClient({ baseUrl: BASE });
 
       const fin = await client.getVaultFinancials(VAULT);
-      expect(fin.apy7d).toBeNull();
+      expect(fin.return7d).toBeNull();
     });
 
     it("throws a clear 404 error", async () => {
@@ -81,33 +81,45 @@ describe("ArkonixAPIClient", () => {
     });
   });
 
-  describe("getApyHistory", () => {
+  describe("getReturnHistory", () => {
     it("appends the days query param and normalizes points", async () => {
-      const fetchMock = mockFetchOnce(rawApyHistory());
+      const fetchMock = mockFetchOnce(rawReturnHistory());
       vi.stubGlobal("fetch", fetchMock);
       const client = new ArkonixAPIClient({ baseUrl: BASE });
 
-      const hist = await client.getApyHistory(SCID, { days: 90 });
+      const hist = await client.getReturnHistory(SCID, { days: 90 });
 
       expect(fetchMock).toHaveBeenCalledWith(
         `${BASE}/public/share-classes/${SCID}/apy-history?days=90`,
         expect.anything(),
       );
+      expect(hist.return7d).toBe(12.5);
+      expect(hist.returnAllTime).toBe(-50.05);
       expect(hist.currentSharePrice).toBe(0.9862);
       expect(hist.points).toHaveLength(2);
       expect(hist.points[0]).toEqual({
         timestamp: 1780069595,
         sharePrice: 1.0,
         cumulativeReturnPct: 0.0,
+        cumulativeReturnSinceInceptionPct: 0.0,
       });
     });
 
+    it("defaults a missing since-inception point value to null", async () => {
+      vi.stubGlobal("fetch", mockFetchOnce(rawReturnHistory()));
+      const client = new ArkonixAPIClient({ baseUrl: BASE });
+
+      const hist = await client.getReturnHistory(SCID);
+      // Second fixture point omits cumulative_return_since_inception_pct.
+      expect(hist.points[1].cumulativeReturnSinceInceptionPct).toBeNull();
+    });
+
     it("omits the query string when days is not provided", async () => {
-      const fetchMock = mockFetchOnce(rawApyHistory());
+      const fetchMock = mockFetchOnce(rawReturnHistory());
       vi.stubGlobal("fetch", fetchMock);
       const client = new ArkonixAPIClient({ baseUrl: BASE });
 
-      await client.getApyHistory(SCID);
+      await client.getReturnHistory(SCID);
       expect(fetchMock).toHaveBeenCalledWith(
         `${BASE}/public/share-classes/${SCID}/apy-history`,
         expect.anything(),
@@ -115,10 +127,10 @@ describe("ArkonixAPIClient", () => {
     });
 
     it("defaults missing points to an empty array", async () => {
-      vi.stubGlobal("fetch", mockFetchOnce(rawApyHistory({ points: undefined })));
+      vi.stubGlobal("fetch", mockFetchOnce(rawReturnHistory({ points: undefined })));
       const client = new ArkonixAPIClient({ baseUrl: BASE });
 
-      const hist = await client.getApyHistory(SCID);
+      const hist = await client.getReturnHistory(SCID);
       expect(hist.points).toEqual([]);
     });
   });
@@ -170,27 +182,33 @@ function rawVaultDetail(overrides: Record<string, unknown> = {}) {
     share_token_address: "0x5555555555555555555555555555555555555555",
     share_price: 0.9862,
     tvl: 1234.56,
-    apy_7d: 12.5,
-    apy_30d: null,
-    apy_90d: null,
-    apy_all_time: -50.05,
+    return_7d_pct: 12.5,
+    return_30d_pct: null,
+    return_90d_pct: null,
+    return_all_time_pct: -50.05,
     vaults: [{ vault_address: VAULT, chain_id: 42161, chain_name: "Arbitrum" }],
     ...overrides,
   };
 }
 
-function rawApyHistory(overrides: Record<string, unknown> = {}) {
+function rawReturnHistory(overrides: Record<string, unknown> = {}) {
   return {
     share_class_id: SCID,
     symbol: "DGI",
     days: 30,
-    apy_7d: 12.5,
-    apy_30d: null,
-    apy_90d: null,
-    apy_all_time: -50.05,
+    return_7d_pct: 12.5,
+    return_30d_pct: null,
+    return_90d_pct: null,
+    return_all_time_pct: -50.05,
     current_share_price: 0.9862,
     points: [
-      { timestamp: 1780069595, share_price: 1.0, cumulative_return_pct: 0.0 },
+      {
+        timestamp: 1780069595,
+        share_price: 1.0,
+        cumulative_return_pct: 0.0,
+        cumulative_return_since_inception_pct: 0.0,
+      },
+      // Second point omits cumulative_return_since_inception_pct → normalizes to null.
       { timestamp: 1780079440, share_price: 0.2669, cumulative_return_pct: -73.3079 },
     ],
     ...overrides,

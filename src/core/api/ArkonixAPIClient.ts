@@ -1,7 +1,7 @@
 import type {
-  ApyHistory,
   ArkonixAPIConfig,
   HistoryQueryParams,
+  ReturnHistory,
   SharePriceHistory,
   TvlHistory,
   VaultFinancials,
@@ -10,7 +10,7 @@ import type {
 /**
  * Client for the Arkonix backend's public financial-data API.
  *
- * Provides NAV (TVL), APY, share price, and historical series for a vault —
+ * Provides NAV (TVL), returns, share price, and historical series for a vault —
  * the data a partner needs to build a UI but which is not available on-chain.
  * All endpoints used here are public (no authentication).
  */
@@ -63,21 +63,21 @@ export class ArkonixAPIClient {
   }
 
   /**
-   * Get the current financial snapshot (NAV/TVL, share price, all APYs) for a vault,
-   * plus the share-class id needed to query history. The address-only entry point.
+   * Get the current financial snapshot (NAV/TVL, share price, all returns) for a
+   * vault, plus the share-class id needed to query history. The address-only entry point.
    */
   async getVaultFinancials(vaultAddress: string): Promise<VaultFinancials> {
     const raw = await this.get<RawVaultDetail>(`/public/vaults/${vaultAddress}`);
     return normalizeVaultFinancials(raw);
   }
 
-  /** APY (7/30/90d, all-time) plus a cumulative-return series for a share class. */
-  async getApyHistory(shareClassId: string, params: HistoryQueryParams = {}): Promise<ApyHistory> {
+  /** Returns (7/30/90d cumulative, all-time) plus a return series for a share class. */
+  async getReturnHistory(shareClassId: string, params: HistoryQueryParams = {}): Promise<ReturnHistory> {
     const qs = buildHistoryQuery(params);
-    const raw = await this.get<RawApyHistory>(
+    const raw = await this.get<RawReturnHistory>(
       `/public/share-classes/${shareClassId}/apy-history${qs}`,
     );
-    return normalizeApyHistory(raw);
+    return normalizeReturnHistory(raw);
   }
 
   /** TVL (NAV) time series for a share class. */
@@ -115,29 +115,30 @@ interface RawVaultDetail {
   share_token_address?: string;
   share_price: number | null;
   tvl: number;
-  apy_7d: number | null;
-  apy_30d: number | null;
-  apy_90d: number | null;
-  apy_all_time: number | null;
+  return_7d_pct: number | null;
+  return_30d_pct: number | null;
+  return_90d_pct: number | null;
+  return_all_time_pct: number | null;
   vaults?: RawVaultRef[];
 }
 
-interface RawApyPoint {
+interface RawReturnPoint {
   timestamp: number;
   share_price: number;
   cumulative_return_pct: number;
+  cumulative_return_since_inception_pct: number | null;
 }
 
-interface RawApyHistory {
+interface RawReturnHistory {
   share_class_id: string;
   symbol: string | null;
   days: number;
-  apy_7d: number | null;
-  apy_30d: number | null;
-  apy_90d: number | null;
-  apy_all_time: number | null;
+  return_7d_pct: number | null;
+  return_30d_pct: number | null;
+  return_90d_pct: number | null;
+  return_all_time_pct: number | null;
   current_share_price: number;
-  points?: RawApyPoint[];
+  points?: RawReturnPoint[];
 }
 
 interface RawTvlPoint {
@@ -181,10 +182,10 @@ function normalizeVaultFinancials(raw: RawVaultDetail): VaultFinancials {
     shareTokenAddress: raw.share_token_address,
     sharePrice: raw.share_price,
     tvlUsd: raw.tvl,
-    apy7d: raw.apy_7d,
-    apy30d: raw.apy_30d,
-    apy90d: raw.apy_90d,
-    apyAllTime: raw.apy_all_time,
+    return7d: raw.return_7d_pct,
+    return30d: raw.return_30d_pct,
+    return90d: raw.return_90d_pct,
+    returnAllTime: raw.return_all_time_pct,
     vaults: (raw.vaults ?? []).map((v) => ({
       vaultAddress: v.vault_address,
       chainId: v.chain_id,
@@ -193,20 +194,21 @@ function normalizeVaultFinancials(raw: RawVaultDetail): VaultFinancials {
   };
 }
 
-function normalizeApyHistory(raw: RawApyHistory): ApyHistory {
+function normalizeReturnHistory(raw: RawReturnHistory): ReturnHistory {
   return {
     shareClassId: raw.share_class_id,
     symbol: raw.symbol,
     days: raw.days,
-    apy7d: raw.apy_7d,
-    apy30d: raw.apy_30d,
-    apy90d: raw.apy_90d,
-    apyAllTime: raw.apy_all_time,
+    return7d: raw.return_7d_pct,
+    return30d: raw.return_30d_pct,
+    return90d: raw.return_90d_pct,
+    returnAllTime: raw.return_all_time_pct,
     currentSharePrice: raw.current_share_price,
     points: (raw.points ?? []).map((p) => ({
       timestamp: p.timestamp,
       sharePrice: p.share_price,
       cumulativeReturnPct: p.cumulative_return_pct,
+      cumulativeReturnSinceInceptionPct: p.cumulative_return_since_inception_pct ?? null,
     })),
   };
 }

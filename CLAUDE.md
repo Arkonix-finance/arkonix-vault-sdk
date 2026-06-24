@@ -1,11 +1,11 @@
 # Arkonix Vault SDK
 
 Universal **React / React Native** SDK for **ERC-7540** async vault deposit & redeem,
-plus financial data (NAV, APY, share price) for Arkonix-deployed vaults. Published to
+plus financial data (NAV, returns, share price) for Arkonix-deployed vaults. Published to
 npm as `@arkonix.xyz/arkonix-vault-sdk`. Built on **viem** + **@tanstack/react-query**.
 
 The north-star use case: a partner has only a **vault address** and wants to build their
-own UI — deposit, redeem, NAV, and APY must all be reachable from that address alone.
+own UI — deposit, redeem, NAV, and returns must all be reachable from that address alone.
 
 ## Commands
 
@@ -31,7 +31,7 @@ src/
 ├── core/                 # Standalone, no React required
 │   ├── blockchain/       # VaultReader (reads), VaultActions (orchestrated tx),
 │   │                     #   VaultTxBuilder (raw calldata)
-│   ├── api/              # ArkonixAPIClient (NAV/APY/price — Arkonix backend),
+│   ├── api/              # ArkonixAPIClient (NAV/returns/price — Arkonix backend),
 │   │                     #   CentrifugeAPIClient (holdings/vaults — GraphQL)
 │   └── wallet/          # WebWalletAdapter, RNWalletAdapter
 ├── hooks/               # React hooks layer wrapping core (deposit, redeem, financials…)
@@ -66,13 +66,15 @@ CANCEL:                    cancel{Deposit,Redeem}Request() → [epoch] → claim
 - Epoch execution is performed off-chain by the Arkonix operator.
 - Poll `useVaultUserState` (auto-refresh ~10s) to detect pending → claimable transitions.
 
-## Financial data (NAV / APY / share price)
+## Financial data (NAV / returns / share price)
 
 These do **not** come from the vault contract — they come from the **Arkonix backend's
 public, unauthenticated endpoints**, keyed by vault address or share-class id. The SDK
-wraps them in `ArkonixAPIClient` (core) and `useVaultFinancials` / `useApyHistory` /
-`useTvlHistory` / `useSharePriceHistory` (hooks). Configure via
-`config.arkonixAPI.baseUrl`. APY fields are `apy7d` / `apy30d` / `apy90d` / `apyAllTime`.
+wraps them in `ArkonixAPIClient` (core) and `useVaultFinancials` / `useReturnHistory` /
+`useTvlHistory` / `useSharePriceHistory` (hooks). Configure via `config.arkonixAPI.baseUrl`.
+Return fields are `return7d` / `return30d` / `return90d` (cumulative %) and `returnAllTime`
+(annualized since inception for ≥30d-old vaults, else cumulative). All percent, nullable —
+`null` ≠ `0`. JSON keys are `return_*_pct`; endpoint path is still `/apy-history`.
 
 ## Code style
 

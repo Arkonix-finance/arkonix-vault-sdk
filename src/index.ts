@@ -20,10 +20,10 @@ export { useCancelDeposit } from "./hooks/useCancelDeposit";
 export { useVaultUserState } from "./hooks/useVaultUserState";
 export { useVaultMetadata } from "./hooks/useVaultMetadata";
 
-// Hooks — Arkonix financial data (NAV / APY / share price / history)
+// Hooks — Arkonix financial data (NAV / returns / share price / history)
 export {
   useVaultFinancials,
-  useApyHistory,
+  useReturnHistory,
   useTvlHistory,
   useSharePriceHistory,
 } from "./hooks/useVaultFinancials";
@@ -44,13 +44,13 @@ export type {
   AddTokenParams,
 } from "./types";
 
-// Arkonix API Types (NAV / APY / share price / history)
+// Arkonix API Types (NAV / returns / share price / history)
 export type {
   ArkonixAPIConfig,
   ArkonixVaultRef,
   VaultFinancials,
-  ApyHistory,
-  ApyHistoryPoint,
+  ReturnHistory,
+  ReturnHistoryPoint,
   TvlHistory,
   TvlHistoryPoint,
   SharePriceHistory,
