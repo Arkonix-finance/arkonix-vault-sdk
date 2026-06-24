@@ -67,8 +67,14 @@ export interface ReturnHistoryPoint {
   /** % return vs the FIRST point in the returned window (resets per `days`). */
   cumulativeReturnPct: number;
   /**
-   * Absolute % return since true inception. Use this (not `cumulativeReturnPct`)
-   * to chart all-time performance. `null` if there's no inception baseline.
+   * Absolute (CUMULATIVE) % return since true inception. Use this (not
+   * `cumulativeReturnPct`) to chart all-time performance. `null` if there's no
+   * inception baseline.
+   *
+   * Both per-point return fields are CUMULATIVE — there is no per-point annualized
+   * series. The only annualized number in the API is the top-level
+   * `returnAllTime` headline (annualizing a per-point series is noisy/explosive
+   * early in a vault's life, so it isn't provided).
    */
   cumulativeReturnSinceInceptionPct: number | null;
 }

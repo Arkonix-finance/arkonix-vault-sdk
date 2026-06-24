@@ -377,12 +377,16 @@ function VaultDashboard({ vaultAddress }: { vaultAddress: `0x${string}` }) {
 > (common on young vaults). Never treat `null` as `0`.
 > - `return7d` / `return30d` / `return90d` are **cumulative** % over the window (a
 >   −7% month reads `-7`, not annualized). They can't explode.
-> - `returnAllTime` is the **only annualized** field — annualized since inception for
->   vaults with ≥30 days of history, otherwise cumulative. Bounded ~[−99, +1000].
+> - `returnAllTime` is the **only annualized** field anywhere in the API — annualized
+>   since inception for vaults with ≥30 days of history, otherwise cumulative.
+>   Bounded ~[−99, +1000].
 > - Headline `return*` are daily-cached; the `points` series is live (~15-min), so
->   the chart's last point will NOT equal `returnAllTime`. To chart all-time, use the
->   per-point `cumulativeReturnSinceInceptionPct` (absolute since launch), not the
->   window-relative `cumulativeReturnPct`.
+>   the chart's last point will NOT equal `returnAllTime`. To chart the all-time
+>   **cumulative** curve, use the per-point `cumulativeReturnSinceInceptionPct`
+>   (absolute since launch), not the window-relative `cumulativeReturnPct`.
+> - Both per-point fields are **cumulative** — there is **no per-point annualized
+>   series**. Don't try to chart annualized APY over time from `points`; the single
+>   annualized figure is `returnAllTime`.
 
 You can also use the client standalone (no React):
 
