@@ -94,9 +94,10 @@ describe("VaultReader", () => {
       const client = createMockClient({
         readContractResult: SHARE,
         multicallResults: [
-          // Batch 1: all zeros
+          // Batch 1: balance, pendingRedeem, claimableRedeem, pendingCancelRedeem, claimableCancelRedeem
           [
             { result: 0n }, { result: 0n }, { result: 0n },
+            { result: false }, { result: 0n },
           ],
         ],
       });
@@ -106,6 +107,8 @@ describe("VaultReader", () => {
       expect(state.shareBalance).toBe(0n);
       expect(state.hasPendingRedeem).toBe(false);
       expect(state.hasClaimableRedeem).toBe(false);
+      expect(state.hasPendingCancelRedeem).toBe(false);
+      expect(state.hasClaimableCancelRedeem).toBe(false);
       expect(state.positionValueFormatted).toBe("0");
       expect(state.isLoading).toBe(false);
     });
@@ -114,13 +117,15 @@ describe("VaultReader", () => {
       const client = createMockClient({
         readContractResult: SHARE,
         multicallResults: [
-          // Batch 1: share data
+          // Batch 1: share data + cancel-redeem state
           [
             { result: 100n * 10n ** 18n }, // shareBalance
             { result: 50n * 10n ** 18n },  // pendingRedeemShares
             { result: 25n * 10n ** 18n },  // claimableRedeemShares
+            { result: false },             // pendingCancelRedeem
+            { result: 0n },                // claimableCancelRedeemShares
           ],
-          // Batch 2: conversions (no async deposit for SYNC_DEPOSIT_ASYNC_REDEEM)
+          // Batch 3: conversions (no async deposit batch for SYNC_DEPOSIT_ASYNC_REDEEM)
           [
             { result: 100000000n }, // positionAssets (100 USDC)
             { result: 50000000n },  // pendingRedeemAssets (50 USDC)
@@ -143,12 +148,17 @@ describe("VaultReader", () => {
       const client = createMockClient({
         readContractResult: SHARE,
         multicallResults: [
-          // Batch 1
-          [{ result: 0n }, { result: 0n }, { result: 0n }],
-          // Batch 2: async deposit state
+          // Batch 1: balance + redeem + cancel-redeem
+          [
+            { result: 0n }, { result: 0n }, { result: 0n },
+            { result: false }, { result: 0n },
+          ],
+          // Batch 2: async deposit + cancel-deposit state
           [
             { result: 500000n }, // pendingDepositAssets
             { result: 200000n }, // claimableDepositAssets
+            { result: false },   // pendingCancelDeposit
+            { result: 0n },      // claimableCancelDepositAssets
           ],
         ],
       });
@@ -165,7 +175,10 @@ describe("VaultReader", () => {
       const client = createMockClient({
         readContractResult: SHARE,
         multicallResults: [
-          [{ result: 0n }, { result: 0n }, { result: 0n }],
+          [
+            { result: 0n }, { result: 0n }, { result: 0n },
+            { result: false }, { result: 0n },
+          ],
         ],
       });
 
@@ -174,7 +187,7 @@ describe("VaultReader", () => {
       expect(state.pendingDepositAssets).toBe(0n);
       expect(state.claimableDepositAssets).toBe(0n);
       expect(state.hasPendingDeposit).toBe(false);
-      // multicall called once (batch 1 only, no batch 2 or 3)
+      // multicall called once (batch 1 only — no async-deposit batch, no conversion batch)
       expect(client.multicall).toHaveBeenCalledTimes(1);
     });
   });

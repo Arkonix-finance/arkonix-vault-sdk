@@ -25,6 +25,15 @@ const EMPTY_STATE: VaultUserState = {
   hasClaimableRedeem: false,
   claimableRedeemShares: 0n,
   claimableRedeemAssetsFormatted: '0',
+
+  hasPendingCancelRedeem: false,
+  claimableCancelRedeemShares: 0n,
+  hasClaimableCancelRedeem: false,
+
+  hasPendingCancelDeposit: false,
+  claimableCancelDepositAssets: 0n,
+  claimableCancelDepositFormatted: '0',
+  hasClaimableCancelDeposit: false,
 };
 
 export function useVaultUserState(

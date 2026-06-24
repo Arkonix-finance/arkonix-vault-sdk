@@ -64,32 +64,42 @@ export class VaultReader {
       functionName: 'share',
     }) as Address;
 
-    // Batch 1: Share balance + redeem state
+    // Batch 1: Share balance + redeem state (incl. cancel-redeem)
     const batch1 = await client.multicall({
       contracts: [
         { address: share, abi: ERC20_ABI, functionName: 'balanceOf', args: [userAddress] },
         { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'pendingRedeemRequest', args: [ZERO, userAddress] },
         { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'claimableRedeemRequest', args: [ZERO, userAddress] },
+        { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'pendingCancelRedeemRequest', args: [ZERO, userAddress] },
+        { address: vaultAddress, abi: SYNC_DEPOSIT_VAULT_ABI, functionName: 'claimableCancelRedeemRequest', args: [ZERO, userAddress] },
       ],
     });
 
     const shareBalance = (batch1[0].result as bigint) ?? ZERO;
     const pendingRedeemShares = (batch1[1].result as bigint) ?? ZERO;
     const claimableRedeemShares = (batch1[2].result as bigint) ?? ZERO;
+    const hasPendingCancelRedeem = (batch1[3].result as boolean) ?? false;
+    const claimableCancelRedeemShares = (batch1[4].result as bigint) ?? ZERO;
 
-    // Batch 2 (async only): pending/claimable deposit requests
+    // Batch 2 (async only): pending/claimable deposit requests (incl. cancel-deposit)
     let pendingDepositAssets = ZERO;
     let claimableDepositAssets = ZERO;
+    let hasPendingCancelDeposit = false;
+    let claimableCancelDepositAssets = ZERO;
 
     if (isAsync) {
       const batch2 = await client.multicall({
         contracts: [
           { address: vaultAddress, abi: ASYNC_VAULT_ABI, functionName: 'pendingDepositRequest', args: [ZERO, userAddress] },
           { address: vaultAddress, abi: ASYNC_VAULT_ABI, functionName: 'claimableDepositRequest', args: [ZERO, userAddress] },
+          { address: vaultAddress, abi: ASYNC_VAULT_ABI, functionName: 'pendingCancelDepositRequest', args: [ZERO, userAddress] },
+          { address: vaultAddress, abi: ASYNC_VAULT_ABI, functionName: 'claimableCancelDepositRequest', args: [ZERO, userAddress] },
         ],
       });
       pendingDepositAssets = (batch2[0].result as bigint) ?? ZERO;
       claimableDepositAssets = (batch2[1].result as bigint) ?? ZERO;
+      hasPendingCancelDeposit = (batch2[2].result as boolean) ?? false;
+      claimableCancelDepositAssets = (batch2[3].result as bigint) ?? ZERO;
     }
 
     // Batch 3: Convert shares → assets for display
@@ -133,6 +143,17 @@ export class VaultReader {
       hasClaimableRedeem: claimableRedeemShares > ZERO,
       claimableRedeemShares,
       claimableRedeemAssetsFormatted: formatUnits(claimableRedeemAssets, depositAssetDecimals),
+
+      // Cancel redeem
+      hasPendingCancelRedeem,
+      claimableCancelRedeemShares,
+      hasClaimableCancelRedeem: claimableCancelRedeemShares > ZERO,
+
+      // Cancel deposit (async only)
+      hasPendingCancelDeposit,
+      claimableCancelDepositAssets,
+      claimableCancelDepositFormatted: formatUnits(claimableCancelDepositAssets, depositAssetDecimals),
+      hasClaimableCancelDeposit: claimableCancelDepositAssets > ZERO,
     };
   }
 

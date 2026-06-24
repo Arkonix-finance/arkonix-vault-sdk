@@ -6,6 +6,20 @@
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -16,13 +30,14 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --reporter=verbose **/*.integration.test.ts",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "pnpm build && pnpm test"
   },
   "dependencies": {
-    "viem": "^2.43.3",
-    "@tanstack/react-query": "^5.90.12"
+    "@tanstack/react-query": "^5.90.12",
+    "viem": "^2.43.3"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
@@ -34,14 +49,15 @@
     }
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "typescript": "^5.0.0",
-    "tsup": "^8.0.0",
-    "vitest": "^2.0.0",
     "@testing-library/react": "^16.0.0",
-    "happy-dom": "^15.0.0",
+    "@types/react": "^19.0.0",
     "@vitest/coverage-v8": "^2.0.0",
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "happy-dom": "^15.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8",
+    "vitest": "^2.0.0"
   },
   "keywords": [
     "arkonix",

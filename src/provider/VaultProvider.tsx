@@ -5,7 +5,7 @@ import type { VaultSDKConfig } from "../types/config";
 import type { WalletAdapter } from "../types/wallet";
 import { WebWalletAdapter } from "../core/wallet/WebWalletAdapter";
 import { RNWalletAdapter } from "../core/wallet/RNWalletAdapter";
-import { CentrifugeAPIClient } from "../core/api";
+import { ArkonixAPIClient, CentrifugeAPIClient } from "../core/api";
 import { isReactNative } from "../utils";
 import { getChain, DEFAULT_CHAIN } from "../constants/chains";
 
@@ -29,11 +29,16 @@ export function VaultProvider({ config, children, walletAdapter: customWalletAda
     });
 
     // Create CentrifugeAPIClient if configuration is provided
-    const centrifugeAPIClient = config.centrifugeAPI 
+    const centrifugeAPIClient = config.centrifugeAPI
       ? new CentrifugeAPIClient(config.centrifugeAPI)
       : undefined;
 
-    return { config, walletAdapter, publicClient, centrifugeAPIClient };
+    // Create ArkonixAPIClient if a base URL is provided (NAV/APY/price source)
+    const arkonixAPIClient = config.arkonixAPI
+      ? new ArkonixAPIClient(config.arkonixAPI)
+      : undefined;
+
+    return { config, walletAdapter, publicClient, arkonixAPIClient, centrifugeAPIClient };
   }, [config, customWalletAdapter]);
 
   return (

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { CentrifugeAPIClient } from "../core/api";
 import type { VaultsQueryParams, CentrifugeVault } from "../types/centrifugeApi";
 
@@ -12,7 +13,7 @@ export function useCentrifugeVaults(
   params: VaultsQueryParams = {},
   apiClient?: CentrifugeAPIClient
 ) {
-  const client = apiClient || new CentrifugeAPIClient();
+  const client = useMemo(() => apiClient || new CentrifugeAPIClient(), [apiClient]);
 
   return useQuery<CentrifugeVault[], Error>({
     queryKey: ['centrifuge-vaults', params],

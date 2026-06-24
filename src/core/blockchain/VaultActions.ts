@@ -98,4 +98,56 @@ export class VaultActions {
     return { txHash };
   }
 
+  static async cancelRedeem(
+    client: PublicClient,
+    sendTransaction: SendTransactionFn,
+    vaultAddress: Address,
+    userAddress: Address,
+  ): Promise<TxResult> {
+    const tx = VaultTxBuilder.buildCancelRedeemTx(vaultAddress, userAddress);
+    const txHash = await sendTransaction(tx) as Hash;
+    await client.waitForTransactionReceipt({ hash: txHash });
+
+    return { txHash };
+  }
+
+  static async claimCancelRedeem(
+    client: PublicClient,
+    sendTransaction: SendTransactionFn,
+    vaultAddress: Address,
+    userAddress: Address,
+  ): Promise<TxResult> {
+    const tx = VaultTxBuilder.buildClaimCancelRedeemTx(vaultAddress, userAddress, userAddress);
+    const txHash = await sendTransaction(tx) as Hash;
+    await client.waitForTransactionReceipt({ hash: txHash });
+
+    return { txHash };
+  }
+
+  static async cancelDeposit(
+    client: PublicClient,
+    sendTransaction: SendTransactionFn,
+    vaultAddress: Address,
+    userAddress: Address,
+  ): Promise<TxResult> {
+    const tx = VaultTxBuilder.buildCancelDepositTx(vaultAddress, userAddress);
+    const txHash = await sendTransaction(tx) as Hash;
+    await client.waitForTransactionReceipt({ hash: txHash });
+
+    return { txHash };
+  }
+
+  static async claimCancelDeposit(
+    client: PublicClient,
+    sendTransaction: SendTransactionFn,
+    vaultAddress: Address,
+    userAddress: Address,
+  ): Promise<TxResult> {
+    const tx = VaultTxBuilder.buildClaimCancelDepositTx(vaultAddress, userAddress, userAddress);
+    const txHash = await sendTransaction(tx) as Hash;
+    await client.waitForTransactionReceipt({ hash: txHash });
+
+    return { txHash };
+  }
+
 }

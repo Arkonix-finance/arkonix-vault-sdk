@@ -4,8 +4,18 @@ export { useDeposit } from "./useDeposit";
 export { useClaimDeposit } from "./useClaimDeposit";
 export { useRequestRedeem } from "./useRequestRedeem";
 export { useClaimRedeem } from "./useClaimRedeem";
+export { useCancelRedeem } from "./useCancelRedeem";
+export { useCancelDeposit } from "./useCancelDeposit";
 export { useVaultUserState } from "./useVaultUserState";
 export { useVaultMetadata } from "./useVaultMetadata";
+
+// Arkonix financial-data hooks (NAV / APY / share price / history)
+export {
+  useVaultFinancials,
+  useApyHistory,
+  useTvlHistory,
+  useSharePriceHistory,
+} from "./useVaultFinancials";
 
 // Centrifuge API hooks
 export { 
