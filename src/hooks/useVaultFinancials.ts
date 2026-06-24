@@ -39,7 +39,7 @@ export function useApyHistory(
   const { arkonixAPIClient } = useVaultContext();
 
   return useQuery<ApyHistory, Error>({
-    queryKey: ["arkonix-apy-history", shareClassId, params.days],
+    queryKey: ["arkonix-apy-history", shareClassId, params],
     queryFn: () => {
       if (!arkonixAPIClient) throw new Error(NOT_CONFIGURED);
       return arkonixAPIClient.getApyHistory(shareClassId!, params);
@@ -57,7 +57,7 @@ export function useTvlHistory(
   const { arkonixAPIClient } = useVaultContext();
 
   return useQuery<TvlHistory, Error>({
-    queryKey: ["arkonix-tvl-history", shareClassId, params.days],
+    queryKey: ["arkonix-tvl-history", shareClassId, params],
     queryFn: () => {
       if (!arkonixAPIClient) throw new Error(NOT_CONFIGURED);
       return arkonixAPIClient.getTvlHistory(shareClassId!, params);

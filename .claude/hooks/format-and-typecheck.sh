@@ -4,6 +4,12 @@
 set -euo pipefail
 cd "$CLAUDE_PROJECT_DIR"
 
+# jq isn't universal (missing in many CI/minimal envs). Skip quietly rather than
+# hard-fail under `set -e`, which would block Claude's self-correction loop.
+if ! command -v jq >/dev/null 2>&1; then
+  exit 0
+fi
+
 FILE="$(jq -r '.tool_input.file_path // empty')"
 [ -z "$FILE" ] && exit 0
 

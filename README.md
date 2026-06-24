@@ -426,7 +426,7 @@ CANCEL REDEEM:
 | `useRequestRedeem(vault)` | Request async redeem |
 | `useClaimRedeem(vault)` | Claim completed redeem |
 | `useCancelRedeem(vault)` | `cancelRedeem()` + `claimCancelRedeem()` |
-| `useCancelDeposit(vault)` | `cancelDeposit()` + `claimCancelDeposit()` (ASYNC only) |
+| `useCancelDeposit(vault, type)` | `cancelDeposit()` + `claimCancelDeposit()` (ASYNC only; pass `type` to fail early on others) |
 | `useVaultFinancials(vault)` | **NAV/TVL, share price, all APYs** from the Arkonix API |
 | `useApyHistory(shareClassId, { days })` | APY headlines + cumulative-return series |
 | `useTvlHistory(shareClassId, { days })` | TVL (NAV) time series |

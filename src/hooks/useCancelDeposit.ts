@@ -1,9 +1,12 @@
 import { useCallback } from "react";
 import type { Address, Hash } from "viem";
-import type { TxState } from "../types/transaction";
+import type { TxState, VaultType } from "../types/transaction";
 import { VaultTxBuilder } from "../core/blockchain/VaultTxBuilder";
 import { useUserAddress } from "./useUserAddress";
 import { useWriteTransaction } from "./useWriteTransaction";
+
+const SYNC_DEPOSIT_UNSUPPORTED =
+  'Cancel deposit is not supported on this vault: SYNC_DEPOSIT_ASYNC_REDEEM deposits settle immediately.';
 
 interface UseCancelDepositReturn {
   /** Submit a cancellation for the user's pending deposit request (ASYNC vaults). */
@@ -18,11 +21,14 @@ interface UseCancelDepositReturn {
 
 /**
  * Cancel a pending deposit request and, once the epoch processes it, reclaim assets.
- * ASYNC vaults only (SYNC_DEPOSIT_ASYNC_REDEEM deposits settle immediately).
+ * ASYNC vaults only (SYNC_DEPOSIT_ASYNC_REDEEM deposits settle immediately) — pass the
+ * vault's `vaultType` so a non-ASYNC vault fails early with a clear error instead of
+ * reverting on-chain.
  *   cancelDeposit() → [epoch] → claimCancelDeposit()
  */
 export function useCancelDeposit(
   vaultAddress: Address | undefined,
+  vaultType: VaultType = 'ASYNC',
 ): UseCancelDepositReturn {
   const userAddress = useUserAddress();
   const { execute, txState, txHash, error, reset, setTxState, setError } = useWriteTransaction();
@@ -30,6 +36,10 @@ export function useCancelDeposit(
   const cancelDeposit = useCallback(async () => {
     if (!userAddress || !vaultAddress) {
       setError('Wallet not connected');
+      return;
+    }
+    if (vaultType !== 'ASYNC') {
+      setError(SYNC_DEPOSIT_UNSUPPORTED);
       return;
     }
 
@@ -42,11 +52,15 @@ export function useCancelDeposit(
       setTxState('error');
       setError(err?.shortMessage || err?.message || 'Transaction failed');
     }
-  }, [userAddress, vaultAddress, execute, setTxState, setError]);
+  }, [userAddress, vaultAddress, vaultType, execute, setTxState, setError]);
 
   const claimCancelDeposit = useCallback(async () => {
     if (!userAddress || !vaultAddress) {
       setError('Wallet not connected');
+      return;
+    }
+    if (vaultType !== 'ASYNC') {
+      setError(SYNC_DEPOSIT_UNSUPPORTED);
       return;
     }
 
@@ -59,7 +73,7 @@ export function useCancelDeposit(
       setTxState('error');
       setError(err?.shortMessage || err?.message || 'Transaction failed');
     }
-  }, [userAddress, vaultAddress, execute, setTxState, setError]);
+  }, [userAddress, vaultAddress, vaultType, execute, setTxState, setError]);
 
   return { cancelDeposit, claimCancelDeposit, txState, txHash, error, reset };
 }
