@@ -33,7 +33,7 @@ export function VaultProvider({ config, children, walletAdapter: customWalletAda
       ? new CentrifugeAPIClient(config.centrifugeAPI)
       : undefined;
 
-    // Create ArkonixAPIClient if a base URL is provided (NAV/APY/price source)
+    // Create ArkonixAPIClient if a base URL is provided (NAV/returns/price source)
     const arkonixAPIClient = config.arkonixAPI
       ? new ArkonixAPIClient(config.arkonixAPI)
       : undefined;

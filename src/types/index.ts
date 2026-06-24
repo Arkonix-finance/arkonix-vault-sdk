@@ -4,13 +4,13 @@ export type { VaultUserState } from "./vaultUserState";
 export type { VaultMetadata } from "./vaultMetadata";
 export type { WalletAdapter, AddTokenParams } from "./wallet";
 
-// Arkonix API types (NAV / APY / share price / history)
+// Arkonix API types (NAV / returns / share price / history)
 export type {
   ArkonixAPIConfig,
   ArkonixVaultRef,
   VaultFinancials,
-  ApyHistory,
-  ApyHistoryPoint,
+  ReturnHistory,
+  ReturnHistoryPoint,
   TvlHistory,
   TvlHistoryPoint,
   SharePriceHistory,

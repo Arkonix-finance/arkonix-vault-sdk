@@ -2,7 +2,7 @@ export interface VaultSDKConfig {
   chainId: number;
   rpcUrl: string;
   /**
-   * Arkonix backend API — source of NAV, APY, share price, and historical series.
+   * Arkonix backend API — source of NAV, returns, share price, and historical series.
    * These metrics are NOT on-chain; they come from Arkonix's public endpoints.
    */
   arkonixAPI?: {

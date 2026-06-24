@@ -1,9 +1,13 @@
 /**
- * Types for the Arkonix backend API — financial data (NAV, APY, share price, history).
+ * Types for the Arkonix backend API — financial data (NAV, returns, share price, history).
  *
  * These fields are sourced from the Arkonix execution service's PUBLIC endpoints
  * (no auth required), keyed by vault address or share-class id. The SDK normalizes
  * the backend's snake_case JSON into camelCase here.
+ *
+ * `return7d/30d/90d` are CUMULATIVE % returns over the window (not annualized);
+ * `returnAllTime` is annualized since inception for vaults with ≥30d of history,
+ * otherwise cumulative. All are percentages (12.5 = 12.5%) and nullable.
  */
 
 export interface ArkonixAPIConfig {
@@ -35,46 +39,62 @@ export interface VaultFinancials {
   /** Total value locked, in USD. This is the vault/share-class NAV. */
   tvlUsd: number;
   /**
-   * Annualized yield, as a percent (e.g. 12.5 = 12.5%), clamped to [-99, 1000].
-   * `null` means insufficient valid history for the window — `null` is NOT `0`,
-   * so never coerce it to 0 or average nulls as zeros (common on young vaults).
-   * Headline APYs are daily-cached; they intentionally won't reconcile exactly
-   * with the live ~15-min share-price `points` series.
+   * CUMULATIVE % return over the window (e.g. 12.5 = 12.5%) — NOT annualized.
+   * A -7% month reads -7, never -60. `null` means insufficient valid history
+   * for the window — `null` is NOT `0`, so never coerce it to 0 or average
+   * nulls as zeros (common on young vaults).
    */
-  apy7d: number | null;
-  apy30d: number | null;
-  apy90d: number | null;
-  apyAllTime: number | null;
+  return7d: number | null;
+  return30d: number | null;
+  return90d: number | null;
+  /**
+   * ANNUALIZED return since inception for vaults with ≥30 days of settled
+   * history; CUMULATIVE for younger ones. The only annualized field.
+   * Percent, bounded to roughly [-99, 1000]. `null` = insufficient history.
+   * Daily-cached — won't reconcile exactly with the live `points` series.
+   */
+  returnAllTime: number | null;
   /** Other vaults belonging to the same share class. */
   vaults: ArkonixVaultRef[];
 }
 
-/** One point in an APY / cumulative-return series. */
-export interface ApyHistoryPoint {
+/** One point in a return / share-price series. */
+export interface ReturnHistoryPoint {
   /** Unix seconds. */
   timestamp: number;
+  /** NAV per share at this time. */
   sharePrice: number;
-  /** (sharePrice / firstInWindow - 1) * 100. */
+  /** % return vs the FIRST point in the returned window (resets per `days`). */
   cumulativeReturnPct: number;
+  /**
+   * Absolute % return since true inception. Use this (not `cumulativeReturnPct`)
+   * to chart all-time performance. `null` if there's no inception baseline.
+   */
+  cumulativeReturnSinceInceptionPct: number | null;
 }
 
 /**
- * APY history for a share class.
+ * Return history for a share class.
  * Source: `GET /public/share-classes/{share_class_id}/apy-history?days=`.
+ *
+ * `return7d/30d/90d` are cumulative; `returnAllTime` is annualized (≥30d) or
+ * cumulative. The headline `return*` fields are daily-cached, while `points` is
+ * the live ~15-min series — the last point will NOT equal `returnAllTime`.
  */
-export interface ApyHistory {
+export interface ReturnHistory {
   shareClassId: string;
   symbol: string | null;
   days: number;
-  /** Percent, clamped [-99, 1000]. `null` = insufficient history; never treat as 0. */
-  apy7d: number | null;
-  apy30d: number | null;
-  apy90d: number | null;
-  apyAllTime: number | null;
+  /** Cumulative %, `null` = insufficient history; never treat as 0. */
+  return7d: number | null;
+  return30d: number | null;
+  return90d: number | null;
+  /** Annualized since inception (≥30d) or cumulative; the only annualized field. */
+  returnAllTime: number | null;
   /** Live current share price; `0` if unset. */
   currentSharePrice: number;
   /** ~50 points, oldest → newest; `[]` when there's no history in the window. */
-  points: ApyHistoryPoint[];
+  points: ReturnHistoryPoint[];
 }
 
 /** One point in a TVL series. */
@@ -122,9 +142,9 @@ export interface SharePriceHistory {
 export interface HistoryQueryParams {
   /**
    * Lookback window in days for the chart series (default 30, range 1..365).
-   * Controls the `points` window only — not the headline APYs, which are fixed
-   * 7/30/90d/all-time. `cumulativeReturnPct` is relative to the first point in
-   * the returned window, so it resets per `days` value.
+   * Controls the `points` window only — not the headline `return*` fields, which
+   * are fixed 7/30/90d/all-time. `cumulativeReturnPct` is relative to the first
+   * point in the returned window, so it resets per `days` value.
    */
   days?: number;
 }

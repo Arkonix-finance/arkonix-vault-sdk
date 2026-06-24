@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
 import type {
-  ApyHistory,
   HistoryQueryParams,
+  ReturnHistory,
   SharePriceHistory,
   TvlHistory,
   VaultFinancials,
@@ -13,7 +13,7 @@ const NOT_CONFIGURED =
   "Arkonix API not configured. Pass config.arkonixAPI.baseUrl to VaultProvider.";
 
 /**
- * Read a vault's financial snapshot — NAV (TVL), share price, and all APY windows —
+ * Read a vault's financial snapshot — NAV (TVL), share price, and all return windows —
  * from the Arkonix backend, given only the vault address. The address-only entry
  * point for partner UIs. Also returns the share-class id used by the *History hooks.
  */
@@ -31,18 +31,18 @@ export function useVaultFinancials(vaultAddress: Address | undefined) {
   });
 }
 
-/** APY (7/30/90d, all-time) plus a cumulative-return series for a share class. */
-export function useApyHistory(
+/** Returns (7/30/90d cumulative, all-time) plus a return series for a share class. */
+export function useReturnHistory(
   shareClassId: string | undefined,
   params: HistoryQueryParams = {},
 ) {
   const { arkonixAPIClient } = useVaultContext();
 
-  return useQuery<ApyHistory, Error>({
-    queryKey: ["arkonix-apy-history", shareClassId, params],
+  return useQuery<ReturnHistory, Error>({
+    queryKey: ["arkonix-return-history", shareClassId, params],
     queryFn: () => {
       if (!arkonixAPIClient) throw new Error(NOT_CONFIGURED);
-      return arkonixAPIClient.getApyHistory(shareClassId!, params);
+      return arkonixAPIClient.getReturnHistory(shareClassId!, params);
     },
     enabled: !!shareClassId && !!arkonixAPIClient,
     staleTime: 5 * 60_000,
