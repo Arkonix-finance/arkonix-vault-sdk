@@ -406,6 +406,103 @@ const distribution = await api.getAssetDistribution(fin.shareClassId);
 const fees = await api.getShareClassFees(fin.shareClassId);
 ```
 
+### 7. User Activity (transaction history)
+
+A user's past deposits, redeems, and claims (plus not-yet-settled requests) come from
+the same Arkonix API — keyed by vault address + user address. `useVaultTransactions`
+stays **disabled until you pass a `userAddress`**, so it's safe to mount before a wallet
+is connected.
+
+```tsx
+import { useAccount } from "wagmi";
+import { useVaultTransactions } from "@arkonix.xyz/arkonix-vault-sdk";
+
+// A settled DEPOSIT/WITHDRAWAL, or an unsettled *_REQUEST still awaiting the epoch.
+// A claim settles as WITHDRAWAL.
+const LABELS: Record<string, string> = {
+  DEPOSIT: "Deposit",
+  WITHDRAWAL: "Withdrawal",
+  DEPOSIT_REQUEST: "Deposit requested",
+  REDEEM_REQUEST: "Redeem requested",
+};
+
+function UserActivity({ vaultAddress }: { vaultAddress: `0x${string}` }) {
+  const { address } = useAccount();
+  const { data, isLoading } = useVaultTransactions(vaultAddress, {
+    userAddress: address,      // query is disabled until this is set
+    transactionType: "ALL",    // or one of DEPOSIT / WITHDRAWAL / *_REQUEST
+    limit: 50,
+  });
+
+  if (!address) return <p>Connect a wallet to see your activity.</p>;
+  if (isLoading || !data) return <p>Loading…</p>;
+  if (data.transactions.length === 0) return <p>No activity yet.</p>;
+
+  return (
+    <ul>
+      {data.transactions.map((tx, i) => (
+        <li key={tx.txHash ?? i}>
+          {LABELS[tx.type]} — {tx.amount} (@ {tx.sharePrice}/share)
+          {/* txHash/blockNumber/timestamp are null for a pending request row */}
+          {tx.timestamp && ` · ${new Date(tx.timestamp).toLocaleString()}`}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 8. Asset Distribution & Fees
+
+The vault's per-asset breakdown (with **backend-computed weights**) and its fee rates
+are keyed by `shareClassId` — which you already have from `useVaultFinancials`. This is
+the two-step flow: read financials for the id, then read distribution/fees with it.
+
+```tsx
+import {
+  useVaultFinancials,
+  useVaultAssetDistribution,
+  useShareClassFees,
+} from "@arkonix.xyz/arkonix-vault-sdk";
+
+function VaultComposition({ vaultAddress }: { vaultAddress: `0x${string}` }) {
+  // Step 1: financials → shareClassId (works from the vault address alone).
+  const { data: fin } = useVaultFinancials(vaultAddress);
+
+  // Step 2: distribution + fees, both keyed by that shareClassId.
+  const { data: dist } = useVaultAssetDistribution(fin?.shareClassId);
+  const { data: fees } = useShareClassFees(fin?.shareClassId);
+
+  if (!dist) return <p>Loading…</p>;
+
+  return (
+    <div>
+      {/* pctOfTvl is computed by the backend — don't re-derive it from valueUsd. */}
+      {dist.assets.map((a) => (
+        <p key={a.symbol}>
+          {a.symbol}: {a.pctOfTvl.toFixed(1)}% (${a.valueUsd.toLocaleString()})
+        </p>
+      ))}
+      {dist.partial && <p>⚠️ Some holdings couldn't be priced: {dist.partialReasons.join(", ")}</p>}
+
+      {/* Returns from useVaultFinancials are ALREADY net of these fees — show them
+          only as a breakdown label. config is null when no fee manager is set. */}
+      {fees?.config && (
+        <p>
+          Net of {fees.config.managementFeePct}% mgmt + {fees.config.performanceFeePct}% perf
+        </p>
+      )}
+    </div>
+  );
+}
+```
+
+> **Note on holdings:** `useVaultAssetDistribution` is the Arkonix-native source and is
+> the recommended way to get a vault's asset breakdown. The older Centrifuge-keyed
+> `useVaultHoldings(poolId, tokenId)` / `usePoolHoldings` / `useCentrifugeHoldings` hooks
+> are **deprecated** (they return raw amounts with no weights) and slated for removal in
+> v3 — see [MIGRATION.md](./MIGRATION.md).
+
 ## ERC-7540 Flow
 
 Understanding the request/claim pattern:
