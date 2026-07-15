@@ -1,6 +1,6 @@
 {
   "name": "@arkonix.xyz/arkonix-vault-sdk",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "type": "module",
   "description": "Universal React/React Native SDK for ERC-7540 vault deposit & redeem operations",
   "main": "dist/index.cjs",

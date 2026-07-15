@@ -396,7 +396,112 @@ import { ArkonixAPIClient } from "@arkonix.xyz/arkonix-vault-sdk";
 const api = new ArkonixAPIClient({ baseUrl: "https://api.arkonix.xyz" });
 const fin = await api.getVaultFinancials("0x...");
 const history = await api.getReturnHistory(fin.shareClassId, { days: 30 });
+
+// A user's transaction activity (deposits/redeems/claims + pending requests)
+const activity = await api.getVaultTransactions("0x...", { userAddress: "0xUser" });
+
+// Asset distribution with backend-computed weights, and the fee breakdown.
+// Both are keyed by share-class id, which the financials snapshot returns.
+const distribution = await api.getAssetDistribution(fin.shareClassId);
+const fees = await api.getShareClassFees(fin.shareClassId);
 ```
+
+### 7. User Activity (transaction history)
+
+A user's past deposits, redeems, and claims (plus not-yet-settled requests) come from
+the same Arkonix API — keyed by vault address + user address. `useVaultTransactions`
+stays **disabled until you pass a `userAddress`**, so it's safe to mount before a wallet
+is connected.
+
+```tsx
+import { useAccount } from "wagmi";
+import { useVaultTransactions } from "@arkonix.xyz/arkonix-vault-sdk";
+
+// A settled DEPOSIT/WITHDRAWAL, or an unsettled *_REQUEST still awaiting the epoch.
+// A claim settles as WITHDRAWAL.
+const LABELS: Record<string, string> = {
+  DEPOSIT: "Deposit",
+  WITHDRAWAL: "Withdrawal",
+  DEPOSIT_REQUEST: "Deposit requested",
+  REDEEM_REQUEST: "Redeem requested",
+};
+
+function UserActivity({ vaultAddress }: { vaultAddress: `0x${string}` }) {
+  const { address } = useAccount();
+  const { data, isLoading } = useVaultTransactions(vaultAddress, {
+    userAddress: address,      // query is disabled until this is set
+    transactionType: "ALL",    // or one of DEPOSIT / WITHDRAWAL / *_REQUEST
+    limit: 50,
+  });
+
+  if (!address) return <p>Connect a wallet to see your activity.</p>;
+  if (isLoading || !data) return <p>Loading…</p>;
+  if (data.transactions.length === 0) return <p>No activity yet.</p>;
+
+  return (
+    <ul>
+      {data.transactions.map((tx, i) => (
+        <li key={tx.txHash ?? i}>
+          {LABELS[tx.type]} — {tx.amount} (@ {tx.sharePrice}/share)
+          {/* txHash/blockNumber/timestamp are null for a pending request row */}
+          {tx.timestamp && ` · ${new Date(tx.timestamp).toLocaleString()}`}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 8. Asset Distribution & Fees
+
+The vault's per-asset breakdown (with **backend-computed weights**) and its fee rates
+are keyed by `shareClassId` — which you already have from `useVaultFinancials`. This is
+the two-step flow: read financials for the id, then read distribution/fees with it.
+
+```tsx
+import {
+  useVaultFinancials,
+  useVaultAssetDistribution,
+  useShareClassFees,
+} from "@arkonix.xyz/arkonix-vault-sdk";
+
+function VaultComposition({ vaultAddress }: { vaultAddress: `0x${string}` }) {
+  // Step 1: financials → shareClassId (works from the vault address alone).
+  const { data: fin } = useVaultFinancials(vaultAddress);
+
+  // Step 2: distribution + fees, both keyed by that shareClassId.
+  const { data: dist } = useVaultAssetDistribution(fin?.shareClassId);
+  const { data: fees } = useShareClassFees(fin?.shareClassId);
+
+  if (!dist) return <p>Loading…</p>;
+
+  return (
+    <div>
+      {/* pctOfTvl is computed by the backend — don't re-derive it from valueUsd. */}
+      {dist.assets.map((a) => (
+        <p key={a.symbol}>
+          {a.symbol}: {a.pctOfTvl.toFixed(1)}% (${a.valueUsd.toLocaleString()})
+        </p>
+      ))}
+      {dist.partial && <p>⚠️ Some holdings couldn't be priced: {dist.partialReasons.join(", ")}</p>}
+
+      {/* Returns from useVaultFinancials are ALREADY net of these fees — show them
+          only as a breakdown label. config is null when no fee manager is set. */}
+      {fees?.config && (
+        <p>
+          Net of {fees.config.managementFeePct}% mgmt + {fees.config.performanceFeePct}% perf
+        </p>
+      )}
+    </div>
+  );
+}
+```
+
+> **Note on holdings:** `useVaultAssetDistribution` is the Arkonix-native source and is
+> the recommended way to get a vault's asset breakdown. The older Centrifuge-keyed
+> `useVaultHoldings(poolId, tokenId)` / `usePoolHoldings` / `useCentrifugeHoldings` hooks
+> are **deprecated** (they return raw amounts with no weights) and slated for removal in
+> v3 — see [MIGRATION.md](./MIGRATION.md).
 
 ## ERC-7540 Flow
 
@@ -442,6 +547,9 @@ CANCEL REDEEM:
 | `useReturnHistory(shareClassId, { days })` | Return headlines + per-point return series |
 | `useTvlHistory(shareClassId, { days })` | TVL (NAV) time series |
 | `useSharePriceHistory(vault)` | On-chain share-price event history |
+| `useVaultTransactions(vault, { userAddress })` | A user's deposit/redeem/claim activity + pending requests (disabled until `userAddress` is set) |
+| `useVaultAssetDistribution(shareClassId)` | Per-asset holdings with **backend-computed weights** (`pctOfTvl`) |
+| `useShareClassFees(shareClassId)` | Management + performance fee rates (returns are already net of these) |
 | `useUserAddress()` | Get connected wallet address |
 | `useVaultContext()` | Access config, walletAdapter, publicClient |
 
@@ -544,6 +652,77 @@ type TxState = 'idle' | 'approving' | 'pending' | 'confirming' | 'success' | 'er
 // 'SYNC_DEPOSIT_ASYNC_REDEEM': deposit is synchronous (ERC-4626), redeem is async.
 type VaultType = 'ASYNC' | 'SYNC_DEPOSIT_ASYNC_REDEEM';
 ```
+
+### Transactions, Asset Distribution & Fees
+
+```typescript
+// A user's activity is either a settled DEPOSIT/WITHDRAWAL, or an unsettled
+// *_REQUEST still awaiting the epoch (a claim settles as WITHDRAWAL).
+type VaultTransactionType =
+  | 'DEPOSIT'
+  | 'WITHDRAWAL'
+  | 'DEPOSIT_REQUEST'
+  | 'REDEEM_REQUEST';
+
+interface VaultTransaction {
+  type: VaultTransactionType;
+  userAddress: string;
+  amount: number;           // asset amount, human-readable; 0 where not applicable
+  shares: number;           // share amount, human-readable; 0 where not applicable
+  sharePrice: number;       // NAV per share at the time of the transaction
+  txHash: string | null;    // null for a request row still awaiting its tx
+  blockNumber: number | null;
+  timestamp: string | null; // ISO-8601
+}
+
+interface VaultTransactions {
+  vaultAddress: string;
+  totalTransactions: number; // may exceed transactions.length when paginated
+  transactions: VaultTransaction[];
+}
+
+interface VaultTransactionsQueryParams {
+  userAddress?: string;                          // restrict to one user (controller)
+  transactionType?: VaultTransactionType | 'ALL'; // default 'ALL'
+  limit?: number;
+  offset?: number;
+}
+
+interface VaultHoldingAsset {
+  symbol: string;
+  amountHuman: number; // already decimal-adjusted
+  valueUsd: number;
+  pctOfTvl: number;    // backend-computed; don't re-derive from valueUsd / totalValueUsd
+}
+
+interface VaultAssetDistribution {
+  shareClassId: string;
+  symbol: string | null;
+  name: string | null;
+  totalValueUsd: number;
+  assets: VaultHoldingAsset[];
+  partial: boolean;         // true when some holdings could not be priced/included
+  partialReasons: string[];
+}
+
+interface ShareClassFeeConfig {
+  managementFeeBps: number;   // 100 bps = 1%
+  performanceFeeBps: number;
+  managementFeePct: string;   // e.g. "1.00"
+  performanceFeePct: string;  // e.g. "10.00"
+}
+
+interface ShareClassFees {
+  shareClassId: string;
+  symbol: string | null;
+  feeRecipient: string | null;
+  isInitialized: boolean;      // false when the fee manager isn't initialized yet
+  config: ShareClassFeeConfig | null; // null = uninitialized, not "no fees"
+}
+```
+
+> `useVaultFinancials` returns are already **net of** the fees in `ShareClassFees` —
+> use the fee types only to display the breakdown, not to re-derive returns.
 
 ## Centrifuge API Integration
 

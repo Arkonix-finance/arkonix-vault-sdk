@@ -205,6 +205,10 @@ export class CentrifugeAPIClient {
    * @param poolId The pool ID
    * @param tokenId The token ID
    * @returns Holdings for the specified vault
+   *
+   * @deprecated Prefer `ArkonixAPIClient.getAssetDistribution(shareClassId)` — keyed
+   * by share-class id (from `getVaultFinancials`) and returns computed `pctOfTvl`
+   * weights. Different key and return shape, not a drop-in rename. Removal in v3.0.0.
    */
   async getVaultHoldings(poolId: string, tokenId: string): Promise<CentrifugeHoldingEscrow[]> {
     return this.getHoldings({ poolId, tokenId });
@@ -214,6 +218,9 @@ export class CentrifugeAPIClient {
    * Get all holdings for a specific pool
    * @param poolId The pool ID
    * @returns All holdings for the specified pool
+   *
+   * @deprecated Prefer `ArkonixAPIClient.getAssetDistribution(shareClassId)` for a
+   * vault's asset breakdown with computed weights. Removal in v3.0.0.
    */
   async getPoolHoldings(poolId: string): Promise<CentrifugeHoldingEscrow[]> {
     return this.getHoldings({ poolId });

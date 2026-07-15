@@ -20,12 +20,15 @@ export { useCancelDeposit } from "./hooks/useCancelDeposit";
 export { useVaultUserState } from "./hooks/useVaultUserState";
 export { useVaultMetadata } from "./hooks/useVaultMetadata";
 
-// Hooks — Arkonix financial data (NAV / returns / share price / history)
+// Hooks — Arkonix financial data (NAV / returns / share price / history / activity)
 export {
   useVaultFinancials,
   useReturnHistory,
   useTvlHistory,
   useSharePriceHistory,
+  useVaultTransactions,
+  useVaultAssetDistribution,
+  useShareClassFees,
 } from "./hooks/useVaultFinancials";
 
 // Hooks — Centrifuge holdings & vaults
@@ -44,7 +47,7 @@ export type {
   AddTokenParams,
 } from "./types";
 
-// Arkonix API Types (NAV / returns / share price / history)
+// Arkonix API Types (NAV / returns / share price / history / activity / fees)
 export type {
   ArkonixAPIConfig,
   ArkonixVaultRef,
@@ -56,6 +59,14 @@ export type {
   SharePriceHistory,
   SharePricePoint,
   HistoryQueryParams,
+  VaultTransaction,
+  VaultTransactionType,
+  VaultTransactions,
+  VaultTransactionsQueryParams,
+  VaultHoldingAsset,
+  VaultAssetDistribution,
+  ShareClassFeeConfig,
+  ShareClassFees,
 } from "./types/arkonixApi";
 
 // Centrifuge API Types
