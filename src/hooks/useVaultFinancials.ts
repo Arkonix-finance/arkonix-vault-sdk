@@ -3,9 +3,13 @@ import type { Address } from "viem";
 import type {
   HistoryQueryParams,
   ReturnHistory,
+  ShareClassFees,
   SharePriceHistory,
   TvlHistory,
+  VaultAssetDistribution,
   VaultFinancials,
+  VaultTransactions,
+  VaultTransactionsQueryParams,
 } from "../types/arkonixApi";
 import { useVaultContext } from "../provider/VaultContext";
 
@@ -79,5 +83,69 @@ export function useSharePriceHistory(vaultAddress: Address | undefined) {
     },
     enabled: !!vaultAddress && !!arkonixAPIClient,
     staleTime: 60_000,
+  });
+}
+
+/**
+ * A user's transaction activity (deposits, redeems, pending requests) for a vault.
+ * Keyed by vault address; pass a `userAddress` in `params` to scope to one user.
+ * The query stays disabled until a `userAddress` is supplied (an all-users list is
+ * rarely what a partner UI wants — pass `{ userAddress }` explicitly).
+ */
+export function useVaultTransactions(
+  vaultAddress: Address | undefined,
+  params: VaultTransactionsQueryParams = {},
+) {
+  const { arkonixAPIClient } = useVaultContext();
+
+  return useQuery<VaultTransactions, Error>({
+    queryKey: ["arkonix-vault-transactions", vaultAddress, params],
+    queryFn: () => {
+      if (!arkonixAPIClient) throw new Error(NOT_CONFIGURED);
+      return arkonixAPIClient.getVaultTransactions(vaultAddress!, params);
+    },
+    enabled: !!vaultAddress && !!params.userAddress && !!arkonixAPIClient,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * A vault's asset distribution (per-asset holdings with pre-computed weights),
+ * from the Arkonix backend. Keyed by share-class id — obtain it from
+ * `useVaultFinancials(vault).data.shareClassId`.
+ *
+ * This is the Arkonix-native holdings source (weights included, vault-scoped). It
+ * is distinct from the Centrifuge-keyed `useVaultHoldings(poolId, tokenId)`.
+ */
+export function useVaultAssetDistribution(shareClassId: string | undefined) {
+  const { arkonixAPIClient } = useVaultContext();
+
+  return useQuery<VaultAssetDistribution, Error>({
+    queryKey: ["arkonix-asset-distribution", shareClassId],
+    queryFn: () => {
+      if (!arkonixAPIClient) throw new Error(NOT_CONFIGURED);
+      return arkonixAPIClient.getAssetDistribution(shareClassId!);
+    },
+    enabled: !!shareClassId && !!arkonixAPIClient,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * The fee structure (management + performance rates) for a share class. Keyed by
+ * share-class id — obtain it from `useVaultFinancials(vault).data.shareClassId`.
+ * The returns from `useVaultFinancials` are already net of these fees.
+ */
+export function useShareClassFees(shareClassId: string | undefined) {
+  const { arkonixAPIClient } = useVaultContext();
+
+  return useQuery<ShareClassFees, Error>({
+    queryKey: ["arkonix-share-class-fees", shareClassId],
+    queryFn: () => {
+      if (!arkonixAPIClient) throw new Error(NOT_CONFIGURED);
+      return arkonixAPIClient.getShareClassFees(shareClassId!);
+    },
+    enabled: !!shareClassId && !!arkonixAPIClient,
+    staleTime: 10 * 60_000,
   });
 }

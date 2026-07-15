@@ -2,9 +2,13 @@ import type {
   ArkonixAPIConfig,
   HistoryQueryParams,
   ReturnHistory,
+  ShareClassFees,
   SharePriceHistory,
   TvlHistory,
+  VaultAssetDistribution,
   VaultFinancials,
+  VaultTransactions,
+  VaultTransactionsQueryParams,
 } from '../../types/arkonixApi';
 
 /**
@@ -95,6 +99,43 @@ export class ArkonixAPIClient {
       `/public/vaults/${vaultAddress}/share-price-history`,
     );
     return normalizeSharePriceHistory(raw);
+  }
+
+  /**
+   * A user's transaction activity (deposits, redeems, and pending requests) for a
+   * vault. Keyed by vault address; pass `userAddress` to scope to one user.
+   */
+  async getVaultTransactions(
+    vaultAddress: string,
+    params: VaultTransactionsQueryParams = {},
+  ): Promise<VaultTransactions> {
+    const qs = buildTransactionsQuery(params);
+    const raw = await this.get<RawVaultTransactions>(
+      `/public/vaults/${vaultAddress}/transactions${qs}`,
+    );
+    return normalizeVaultTransactions(raw);
+  }
+
+  /**
+   * A vault's asset distribution (per-asset holdings with pre-computed weights).
+   * Keyed by share-class id — get it from `getVaultFinancials(vault).shareClassId`.
+   */
+  async getAssetDistribution(shareClassId: string): Promise<VaultAssetDistribution> {
+    const raw = await this.get<RawShareClassHoldings>(
+      `/public/share-classes/${shareClassId}/holdings`,
+    );
+    return normalizeAssetDistribution(raw);
+  }
+
+  /**
+   * The fee structure for a share class (management + performance rates).
+   * Keyed by share-class id — get it from `getVaultFinancials(vault).shareClassId`.
+   */
+  async getShareClassFees(shareClassId: string): Promise<ShareClassFees> {
+    const raw = await this.get<RawShareClassFees>(
+      `/public/share-classes/${shareClassId}/fees`,
+    );
+    return normalizeShareClassFees(raw);
   }
 }
 
@@ -239,5 +280,115 @@ function normalizeSharePriceHistory(raw: RawSharePriceHistory): SharePriceHistor
       sharePrice: p.share_price,
       txHash: p.tx_hash,
     })),
+  };
+}
+
+interface RawVaultTransaction {
+  type: 'DEPOSIT' | 'WITHDRAWAL' | 'DEPOSIT_REQUEST' | 'REDEEM_REQUEST';
+  user_address: string;
+  amount: number;
+  shares: number;
+  share_price: number;
+  tx_hash: string | null;
+  block_number: number | null;
+  timestamp: string | null;
+}
+
+interface RawVaultTransactions {
+  vault_address: string;
+  total_transactions: number;
+  transactions?: RawVaultTransaction[];
+}
+
+interface RawHoldingAssetItem {
+  symbol: string;
+  amount_human: number;
+  value_usd: number;
+  pct_of_tvl: number;
+}
+
+interface RawShareClassHoldings {
+  share_class_id: string;
+  symbol: string | null;
+  name: string | null;
+  total_value_usd: number;
+  tokens?: RawHoldingAssetItem[];
+  partial?: boolean;
+  partial_reasons?: string[];
+}
+
+interface RawFeeConfig {
+  management_fee_bps: number;
+  performance_fee_bps: number;
+  management_fee_pct: string;
+  performance_fee_pct: string;
+}
+
+interface RawShareClassFees {
+  share_class_id: string;
+  symbol: string | null;
+  fee_recipient: string | null;
+  is_initialized: boolean;
+  config: RawFeeConfig | null;
+}
+
+function buildTransactionsQuery(params: VaultTransactionsQueryParams): string {
+  const qs = new URLSearchParams();
+  if (params.userAddress) qs.set('user_address', params.userAddress);
+  if (params.transactionType) qs.set('transaction_type', params.transactionType);
+  if (params.limit !== undefined) qs.set('limit', String(params.limit));
+  if (params.offset !== undefined) qs.set('offset', String(params.offset));
+  const s = qs.toString();
+  return s ? `?${s}` : '';
+}
+
+function normalizeVaultTransactions(raw: RawVaultTransactions): VaultTransactions {
+  return {
+    vaultAddress: raw.vault_address,
+    totalTransactions: raw.total_transactions,
+    transactions: (raw.transactions ?? []).map((t) => ({
+      type: t.type,
+      userAddress: t.user_address,
+      amount: t.amount,
+      shares: t.shares,
+      sharePrice: t.share_price,
+      txHash: t.tx_hash,
+      blockNumber: t.block_number,
+      timestamp: t.timestamp,
+    })),
+  };
+}
+
+function normalizeAssetDistribution(raw: RawShareClassHoldings): VaultAssetDistribution {
+  return {
+    shareClassId: raw.share_class_id,
+    symbol: raw.symbol,
+    name: raw.name,
+    totalValueUsd: raw.total_value_usd,
+    assets: (raw.tokens ?? []).map((t) => ({
+      symbol: t.symbol,
+      amountHuman: t.amount_human,
+      valueUsd: t.value_usd,
+      pctOfTvl: t.pct_of_tvl,
+    })),
+    partial: raw.partial ?? false,
+    partialReasons: raw.partial_reasons ?? [],
+  };
+}
+
+function normalizeShareClassFees(raw: RawShareClassFees): ShareClassFees {
+  return {
+    shareClassId: raw.share_class_id,
+    symbol: raw.symbol,
+    feeRecipient: raw.fee_recipient,
+    isInitialized: raw.is_initialized,
+    config: raw.config
+      ? {
+          managementFeeBps: raw.config.management_fee_bps,
+          performanceFeeBps: raw.config.performance_fee_bps,
+          managementFeePct: raw.config.management_fee_pct,
+          performanceFeePct: raw.config.performance_fee_pct,
+        }
+      : null,
   };
 }

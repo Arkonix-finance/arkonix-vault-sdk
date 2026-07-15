@@ -396,6 +396,14 @@ import { ArkonixAPIClient } from "@arkonix.xyz/arkonix-vault-sdk";
 const api = new ArkonixAPIClient({ baseUrl: "https://api.arkonix.xyz" });
 const fin = await api.getVaultFinancials("0x...");
 const history = await api.getReturnHistory(fin.shareClassId, { days: 30 });
+
+// A user's transaction activity (deposits/redeems/claims + pending requests)
+const activity = await api.getVaultTransactions("0x...", { userAddress: "0xUser" });
+
+// Asset distribution with backend-computed weights, and the fee breakdown.
+// Both are keyed by share-class id, which the financials snapshot returns.
+const distribution = await api.getAssetDistribution(fin.shareClassId);
+const fees = await api.getShareClassFees(fin.shareClassId);
 ```
 
 ## ERC-7540 Flow
@@ -442,6 +450,9 @@ CANCEL REDEEM:
 | `useReturnHistory(shareClassId, { days })` | Return headlines + per-point return series |
 | `useTvlHistory(shareClassId, { days })` | TVL (NAV) time series |
 | `useSharePriceHistory(vault)` | On-chain share-price event history |
+| `useVaultTransactions(vault, { userAddress })` | A user's deposit/redeem/claim activity + pending requests (disabled until `userAddress` is set) |
+| `useVaultAssetDistribution(shareClassId)` | Per-asset holdings with **backend-computed weights** (`pctOfTvl`) |
+| `useShareClassFees(shareClassId)` | Management + performance fee rates (returns are already net of these) |
 | `useUserAddress()` | Get connected wallet address |
 | `useVaultContext()` | Access config, walletAdapter, publicClient |
 
@@ -544,6 +555,77 @@ type TxState = 'idle' | 'approving' | 'pending' | 'confirming' | 'success' | 'er
 // 'SYNC_DEPOSIT_ASYNC_REDEEM': deposit is synchronous (ERC-4626), redeem is async.
 type VaultType = 'ASYNC' | 'SYNC_DEPOSIT_ASYNC_REDEEM';
 ```
+
+### Transactions, Asset Distribution & Fees
+
+```typescript
+// A user's activity is either a settled DEPOSIT/WITHDRAWAL, or an unsettled
+// *_REQUEST still awaiting the epoch (a claim settles as WITHDRAWAL).
+type VaultTransactionType =
+  | 'DEPOSIT'
+  | 'WITHDRAWAL'
+  | 'DEPOSIT_REQUEST'
+  | 'REDEEM_REQUEST';
+
+interface VaultTransaction {
+  type: VaultTransactionType;
+  userAddress: string;
+  amount: number;           // asset amount, human-readable; 0 where not applicable
+  shares: number;           // share amount, human-readable; 0 where not applicable
+  sharePrice: number;       // NAV per share at the time of the transaction
+  txHash: string | null;    // null for a request row still awaiting its tx
+  blockNumber: number | null;
+  timestamp: string | null; // ISO-8601
+}
+
+interface VaultTransactions {
+  vaultAddress: string;
+  totalTransactions: number; // may exceed transactions.length when paginated
+  transactions: VaultTransaction[];
+}
+
+interface VaultTransactionsQueryParams {
+  userAddress?: string;                          // restrict to one user (controller)
+  transactionType?: VaultTransactionType | 'ALL'; // default 'ALL'
+  limit?: number;
+  offset?: number;
+}
+
+interface VaultHoldingAsset {
+  symbol: string;
+  amountHuman: number; // already decimal-adjusted
+  valueUsd: number;
+  pctOfTvl: number;    // backend-computed; don't re-derive from valueUsd / totalValueUsd
+}
+
+interface VaultAssetDistribution {
+  shareClassId: string;
+  symbol: string | null;
+  name: string | null;
+  totalValueUsd: number;
+  assets: VaultHoldingAsset[];
+  partial: boolean;         // true when some holdings could not be priced/included
+  partialReasons: string[];
+}
+
+interface ShareClassFeeConfig {
+  managementFeeBps: number;   // 100 bps = 1%
+  performanceFeeBps: number;
+  managementFeePct: string;   // e.g. "1.00"
+  performanceFeePct: string;  // e.g. "10.00"
+}
+
+interface ShareClassFees {
+  shareClassId: string;
+  symbol: string | null;
+  feeRecipient: string | null;
+  isInitialized: boolean;      // false when the fee manager isn't initialized yet
+  config: ShareClassFeeConfig | null; // null = uninitialized, not "no fees"
+}
+```
+
+> `useVaultFinancials` returns are already **net of** the fees in `ShareClassFees` —
+> use the fee types only to display the breakdown, not to re-derive returns.
 
 ## Centrifuge API Integration
 

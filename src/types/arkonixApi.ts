@@ -154,3 +154,133 @@ export interface HistoryQueryParams {
    */
   days?: number;
 }
+
+// ---------------------------------------------------------------------------
+// User transaction activity
+// ---------------------------------------------------------------------------
+
+/**
+ * The kind of user activity a `VaultTransaction` represents.
+ *
+ * - `DEPOSIT` / `WITHDRAWAL`: a settled deposit or redeem (a claim settles as
+ *   `WITHDRAWAL`).
+ * - `DEPOSIT_REQUEST` / `REDEEM_REQUEST`: a request that has been submitted but
+ *   not yet settled by the epoch.
+ */
+export type VaultTransactionType =
+  | 'DEPOSIT'
+  | 'WITHDRAWAL'
+  | 'DEPOSIT_REQUEST'
+  | 'REDEEM_REQUEST';
+
+/** One row of a user's historical activity on a vault. */
+export interface VaultTransaction {
+  type: VaultTransactionType;
+  /** The user (controller) address this row belongs to. */
+  userAddress: string;
+  /** Asset amount (human-readable, e.g. 100.5 USDC). `0` where not applicable. */
+  amount: number;
+  /** Share amount (human-readable). `0` where not applicable. */
+  shares: number;
+  /** NAV per share at the time of the transaction. */
+  sharePrice: number;
+  /** On-chain tx hash; `null` for a request row still awaiting its tx. */
+  txHash: string | null;
+  /** Block number; `null` until on-chain. */
+  blockNumber: number | null;
+  /** ISO-8601 timestamp string; `null` if unknown. */
+  timestamp: string | null;
+}
+
+/**
+ * A user's transaction history for a vault.
+ * Source: `GET /public/vaults/{vault_address}/transactions?user_address=`.
+ */
+export interface VaultTransactions {
+  vaultAddress: string;
+  /** Total rows available for this user (may exceed `transactions.length` when paginated). */
+  totalTransactions: number;
+  /** Newest → oldest is NOT guaranteed; sort client-side by `timestamp` if order matters. */
+  transactions: VaultTransaction[];
+}
+
+/** Optional filters for a user transactions query. */
+export interface VaultTransactionsQueryParams {
+  /** Restrict to a single user (controller) address. Omit for all users on the vault. */
+  userAddress?: string;
+  /** Restrict to one transaction type, or `'ALL'` (default) for every type. */
+  transactionType?: VaultTransactionType | 'ALL';
+  /** Max rows to return. */
+  limit?: number;
+  /** Row offset for pagination. */
+  offset?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Asset distribution (holdings) — Arkonix-native, weights included
+// ---------------------------------------------------------------------------
+
+/** One asset the vault holds, with its share of TVL already computed. */
+export interface VaultHoldingAsset {
+  symbol: string;
+  /** Amount held, human-readable (already decimal-adjusted). */
+  amountHuman: number;
+  /** USD value of this holding. */
+  valueUsd: number;
+  /** Percent of the vault's total value this asset represents (e.g. 42.5 = 42.5%). */
+  pctOfTvl: number;
+}
+
+/**
+ * A vault's asset distribution (holdings breakdown with weights).
+ * Source: `GET /public/share-classes/{share_class_id}/holdings`.
+ *
+ * `pctOfTvl` is computed by the backend — do not re-derive it from
+ * `valueUsd / totalValueUsd` (rounding and off-chain assets can make them differ).
+ */
+export interface VaultAssetDistribution {
+  shareClassId: string;
+  symbol: string | null;
+  name: string | null;
+  /** Total USD value across all holdings. */
+  totalValueUsd: number;
+  assets: VaultHoldingAsset[];
+  /** `true` when some holdings could not be priced/included (see `partialReasons`). */
+  partial: boolean;
+  /** Human-readable reasons a `partial` result is incomplete. */
+  partialReasons: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Fees
+// ---------------------------------------------------------------------------
+
+/** Fee rates for a share class, in basis points and percent. */
+export interface ShareClassFeeConfig {
+  /** Management fee in basis points (100 bps = 1%). */
+  managementFeeBps: number;
+  /** Performance fee in basis points. */
+  performanceFeeBps: number;
+  /** Management fee as a percent string, e.g. "1.00". */
+  managementFeePct: string;
+  /** Performance fee as a percent string, e.g. "10.00". */
+  performanceFeePct: string;
+}
+
+/**
+ * Fee structure for a share class, read from the on-chain fee manager.
+ * Source: `GET /public/share-classes/{share_class_id}/fees`.
+ *
+ * The headline returns from `useVaultFinancials` are ALREADY net of these fees;
+ * use this only to display the fee breakdown (e.g. "net of 1% mgmt + 10% perf").
+ */
+export interface ShareClassFees {
+  shareClassId: string;
+  symbol: string | null;
+  /** Address fees accrue to; `null` if unset. */
+  feeRecipient: string | null;
+  /** `false` when the fee manager has not been initialized for this share class. */
+  isInitialized: boolean;
+  /** `null` when uninitialized — treat as "no fees configured", not zero fees. */
+  config: ShareClassFeeConfig | null;
+}
