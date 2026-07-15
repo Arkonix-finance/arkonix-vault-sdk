@@ -8,6 +8,11 @@ import type { HoldingsQueryParams, CentrifugeHoldingEscrow } from "../types/cent
  * @param params Query parameters including poolId and tokenId filters
  * @param apiClient Optional CentrifugeAPIClient instance (creates one if not provided)
  * @returns Query result with holdings data
+ *
+ * @deprecated Prefer `useVaultAssetDistribution(shareClassId)` — the Arkonix-native
+ * holdings source, keyed by share-class id (from `useVaultFinancials`) and returning
+ * pre-computed `pctOfTvl` weights. This Centrifuge-keyed hook returns raw amounts with
+ * no weights. Planned for removal in v3.0.0. See MIGRATION.md.
  */
 export function useCentrifugeHoldings(
   params: HoldingsQueryParams = {},
@@ -30,6 +35,11 @@ export function useCentrifugeHoldings(
  * @param tokenId The token ID
  * @param apiClient Optional CentrifugeAPIClient instance
  * @returns Query result with vault holdings data
+ *
+ * @deprecated Prefer `useVaultAssetDistribution(shareClassId)` — Arkonix-native,
+ * keyed by share-class id (not Centrifuge pool/token id), and includes computed
+ * `pctOfTvl` weights. Note the different key and return shape — not a drop-in
+ * rename. Planned for removal in v3.0.0. See MIGRATION.md.
  */
 export function useVaultHoldings(
   poolId: string | undefined,
@@ -52,6 +62,9 @@ export function useVaultHoldings(
  * @param poolId The pool ID
  * @param apiClient Optional CentrifugeAPIClient instance
  * @returns Query result with pool holdings data
+ *
+ * @deprecated Prefer `useVaultAssetDistribution(shareClassId)` for a vault's asset
+ * breakdown with computed weights. Planned for removal in v3.0.0. See MIGRATION.md.
  */
 export function usePoolHoldings(
   poolId: string | undefined,

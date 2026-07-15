@@ -163,6 +163,48 @@ If `vaultType` is anything other than `'ASYNC'` (or is undefined), `cancelDeposi
 
 ---
 
+## Deprecations (still work — plan ahead)
+
+Nothing below breaks in this release; each still compiles and runs. They carry a
+`@deprecated` JSDoc tag (you'll see a strikethrough in your editor) and are **planned
+for removal in v3.0.0**.
+
+### Centrifuge holdings → Arkonix asset distribution
+
+The Centrifuge-keyed holdings hooks/methods are superseded by an Arkonix-native source
+that is keyed by **share-class id** (not Centrifuge `poolId`/`tokenId`) and returns
+**pre-computed `pctOfTvl` weights** — the numbers a dashboard actually needs.
+
+| Deprecated | Replacement |
+|---|---|
+| `useVaultHoldings(poolId, tokenId)` | `useVaultAssetDistribution(shareClassId)` |
+| `usePoolHoldings(poolId)` | `useVaultAssetDistribution(shareClassId)` |
+| `useCentrifugeHoldings({ poolId, tokenId })` | `useVaultAssetDistribution(shareClassId)` |
+| `CentrifugeAPIClient.getVaultHoldings(poolId, tokenId)` | `ArkonixAPIClient.getAssetDistribution(shareClassId)` |
+| `CentrifugeAPIClient.getPoolHoldings(poolId)` | `ArkonixAPIClient.getAssetDistribution(shareClassId)` |
+
+> **Not a mechanical rename.** Three things change: the **key** (share-class id, from
+> `useVaultFinancials(...).data.shareClassId`), the **return shape**
+> (`VaultAssetDistribution` with an `assets[]` array of `{ symbol, amountHuman, valueUsd,
+> pctOfTvl }`, vs. raw `CentrifugeHoldingEscrow[]`), and the **backend** (Arkonix REST vs.
+> Centrifuge GraphQL). The old hooks gave you raw amounts and no weights.
+
+```tsx
+// BEFORE — Centrifuge-keyed, no weights (you computed them yourself)
+const { data: holdings } = useVaultHoldings(poolId, tokenId);
+
+// AFTER — vault-scoped via share-class id, weights included
+const { data: fin } = useVaultFinancials(vaultAddress);
+const { data: dist } = useVaultAssetDistribution(fin?.shareClassId);
+dist?.assets.forEach(a => console.log(a.symbol, a.pctOfTvl)); // pctOfTvl already computed
+```
+
+**Not deprecated:** the vault-*discovery* hooks (`useCentrifugeVaults`, `usePoolVaults`,
+`useActiveVaults`) and the base `CentrifugeAPIClient.getHoldings(...)` filter query —
+these have no Arkonix equivalent and are unaffected.
+
+---
+
 ## New & additive (no migration needed)
 
 You can adopt these whenever you like:
